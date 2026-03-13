@@ -9,6 +9,7 @@ const matchId = urlParams.get("matchId") || "default";
 let draggedPiece = null;
 let sourceSquare = null;
 let playerRole = null;
+let moveHistoryData = [];
 
 // Join the specific match room
 socket.emit("joinMatch", matchId);
@@ -83,7 +84,8 @@ const renderBoard = () => {
 
 const renderMoveHistory = () => {
   const historyElement = document.getElementById("history-content");
-  const history = chess.history();
+  if (!historyElement) return;
+  const history = moveHistoryData;
   historyElement.innerHTML = "";
 
   for (let i = 0; i < history.length; i += 2) {
@@ -183,6 +185,10 @@ socket.on("boardState", function (fen) {
   if (turnDisplay) {
     turnDisplay.innerText = "Turn: " + (turn === "w" ? "White" : "Black");
   }
+  const gameOverModal = document.getElementById("game-over-modal");
+  if (gameOverModal) {
+    gameOverModal.style.display = "none";
+  }
 });
 
 socket.on("timerUpdate", function (timers) {
@@ -192,7 +198,11 @@ socket.on("timerUpdate", function (timers) {
 
 socket.on("move", function (move) {
   chess.move(move);
-  // Redundant render removed to prevent UI jitter
+});
+
+socket.on("moveHistory", function (history) {
+  moveHistoryData = history;
+  renderMoveHistory();
 });
 
 const updateTimerDisplay = (id, seconds) => {

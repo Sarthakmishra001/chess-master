@@ -30,8 +30,9 @@ app.get("/", function (req, res) {
 
 app.get("/match-history", async function (req, res) {
   try {
-    const matches = await Match.find().sort({ createdAt: -1 });
-    res.render("match-history", { matches });
+    const filter = req.query.matchId ? { matchId: req.query.matchId } : {};
+    const matches = await Match.find(filter).sort({ createdAt: -1 });
+    res.render("match-history", { matches, filterMatchId: req.query.matchId || null });
   } catch (err) {
     console.error("Error fetching match history:", err);
     res.status(500).send("Internal Server Error");
@@ -104,8 +105,9 @@ io.on("connection", function (uniqueSocket) {
           const winner = turn === "w" ? "Black" : "White";
           const reason = `TIME OUT\n${winner} wins!`;
           io.to(matchId).emit("game_over", reason);
-          saveMatch(matchId, reason);
-          delete games[matchId];
+          saveMatch(matchId, reason).then(() => {
+            delete games[matchId];
+          });
           console.log(`[${matchId}] Game ended by time out: ${winner} wins`);
         }
       }, 1000);
@@ -148,6 +150,7 @@ io.on("connection", function (uniqueSocket) {
 
     updateSpectatorCount(currentMatchId);
     uniqueSocket.emit("boardState", game.chess.fen());
+    uniqueSocket.emit("moveHistory", game.chess.history());
     uniqueSocket.emit("timerUpdate", game.timer);
 
     startTimer(currentMatchId);
@@ -160,6 +163,7 @@ io.on("connection", function (uniqueSocket) {
     if (uniqueSocket.id === game.players.white || uniqueSocket.id === game.players.black) {
       initializeGame(currentMatchId);
       io.to(currentMatchId).emit("boardState", games[currentMatchId].chess.fen());
+      io.to(currentMatchId).emit("moveHistory", games[currentMatchId].chess.history());
       io.to(currentMatchId).emit("timerUpdate", games[currentMatchId].timer);
       startTimer(currentMatchId);
       console.log(`[${currentMatchId}] Game reset by ${uniqueSocket.id}`);
@@ -186,6 +190,7 @@ io.on("connection", function (uniqueSocket) {
 
     try {
       const match = new Match({
+        matchId: matchId,
         player1: game.players.white || "White Player",
         player2: game.players.black || "Black Player",
         moves: game.chess.history(),
@@ -236,8 +241,9 @@ io.on("connection", function (uniqueSocket) {
              if (games[currentMatchId] && games[currentMatchId].disconnectedRole === abandonedRole.toLowerCase()) {
                 const reason = `FORFEIT\n${abandonedRole} disconnected. ${winningRole} wins!`;
                 io.to(currentMatchId).emit("game_over", reason);
-                saveMatch(currentMatchId, reason);
-                delete games[currentMatchId];
+                saveMatch(currentMatchId, reason).then(() => {
+                  delete games[currentMatchId];
+                });
                 console.log(`[${currentMatchId}] Game ends via forfeit. ${winningRole} wins`);
              }
            }, 30000); // 30 seconds
@@ -279,6 +285,7 @@ io.on("connection", function (uniqueSocket) {
       if (result) {
         io.to(currentMatchId).emit("move", move);
         io.to(currentMatchId).emit("boardState", chess.fen());
+        io.to(currentMatchId).emit("moveHistory", chess.history());
         console.log(`[${currentMatchId}] Move: ${result.from} -> ${result.to}`);
 
         if (chess.isGameOver()) {
@@ -299,8 +306,9 @@ io.on("connection", function (uniqueSocket) {
             reason = "INSUFFICIENT MATERIAL";
           }
           io.to(currentMatchId).emit("game_over", reason);
-          saveMatch(currentMatchId, reason);
-          delete games[currentMatchId];
+          saveMatch(currentMatchId, reason).then(() => {
+            delete games[currentMatchId];
+          });
         }
       } else {
         uniqueSocket.emit("invalidMove", move);

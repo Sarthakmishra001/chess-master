@@ -32,8 +32,18 @@
 <body class="min-h-screen flex flex-col items-center py-12 px-4">
     <div class="w-full max-w-4xl">
         <div class="flex items-center justify-between mb-8">
-            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Match History</h1>
-            <a href="/" class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors border border-zinc-700">Back to Game</a>
+            <div>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Match History</h1>
+                <% if (locals.filterMatchId) { %>
+                    <p class="text-zinc-500 text-sm mt-1">Showing matches for room: <span class="font-mono text-blue-400"><%= filterMatchId %></span></p>
+                <% } %>
+            </div>
+            <div class="flex gap-2">
+                <% if (locals.filterMatchId) { %>
+                    <a href="/match-history" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors border border-zinc-700">All Matches</a>
+                <% } %>
+                <a href="/" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors border border-zinc-700">Back to Game</a>
+            </div>
         </div>
 
         <div class="glass-panel p-6">
@@ -52,11 +62,11 @@
                         <tbody class="divide-y divide-zinc-800">
                             <% matches.forEach(match => { %>
                                 <tr class="group hover:bg-white/[0.02] transition-colors">
-                                    <td class="py-4 text-xs font-mono text-zinc-500"><%= match._id.toString().substring(0, 8) %>...</td>
+                                    <td class="py-4 text-xs font-mono text-blue-400"><%= match.matchId %></td>
                                     <td class="py-4">
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-medium text-zinc-200">W: <%= match.player1 %></span>
-                                            <span class="text-sm font-medium text-zinc-400">B: <%= match.player2 %></span>
+                                            <span class="text-sm font-medium text-zinc-200">White</span>
+                                            <span class="text-sm font-medium text-zinc-400">Black</span>
                                         </div>
                                     </td>
                                     <td class="py-4">

@@ -28,7 +28,6 @@
             border-radius: 12px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             width: 100%;
-            max-width: 650px;
             padding: 0.5rem !important;
         }
 
@@ -37,9 +36,9 @@
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
             width: 100%;
-            max-width: 500px;
             aspect-ratio: 1 / 1;
-            border: 8px solid #2d2d2d;
+            margin: 0 auto;
+            border: 6px solid #2d2d2d;
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 20px 50px rgba(0,0,0,0.6);
@@ -61,7 +60,7 @@
         }
 
         .piece {
-            font-size: clamp(24px, 6vw, 48px);
+            font-size: clamp(22px, 5.5vw, 46px);
             cursor: move;
             transition: transform 0.2s ease;
             user-select: none;
@@ -156,27 +155,32 @@
     </div>
 
     <div class="min-h-screen flex flex-col items-center justify-center p-4">
-        <header class="mb-4 text-center">
+        <header class="mb-3 text-center">
             <h1 class="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Chess Master</h1>
-            <div class="mt-2">
-                <a href="/match-history" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4">View Match History</a>
+            <div class="mt-2 flex items-center justify-center gap-4">
+                <a href="/match-history?matchId=<%= locals.matchId %>" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4">Match History</a>
+                <div class="flex items-center gap-2 px-3 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/50">
+                    <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Room</span>
+                    <span id="room-id-text" class="text-xs font-mono text-blue-400"><%= locals.matchId %></span>
+                    <button onclick="copyRoomId()" id="copy-btn" class="text-[10px] px-2 py-0.5 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors">Copy</button>
+                </div>
             </div>
         </header>
 
-        <div class="mb-4 flex gap-8 text-lg font-mono font-bold tracking-wider">
-            <div id="white-timer" class="px-4 py-1 rounded bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]">White: 05:00</div>
-            <div id="black-timer" class="px-4 py-1 rounded bg-black text-white border border-zinc-700 shadow-[0_0_15px_rgba(0,0,0,0.5)]">Black: 05:00</div>
+        <div class="mb-3 flex gap-6 text-base font-mono font-bold tracking-wider">
+            <div id="white-timer" class="px-3 py-1 rounded bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]">White: 05:00</div>
+            <div id="black-timer" class="px-3 py-1 rounded bg-black text-white border border-zinc-700 shadow-[0_0_15px_rgba(0,0,0,0.5)]">Black: 05:00</div>
         </div>
 
-        <div class="w-full max-w-6xl flex flex-col items-center justify-center gap-6">
+        <div class="w-full flex flex-col md:flex-row items-center md:items-start justify-center gap-4" style="max-width: 900px;">
             <!-- Chessboard Container -->
-            <div class="glass-panel">
+            <div class="glass-panel" style="max-width: min(65vh, 480px); flex-shrink: 0;">
                 <div class="chessboard"></div>
             </div>
 
             <!-- Move History Sidebar -->
-            <div class="glass-panel w-full md:w-64 h-80 md:h-[600px] flex flex-col">
-                <h3 class="text-sm font-bold uppercase tracking-widest mb-4 text-center text-zinc-400">Move History</h3>
+            <div class="glass-panel flex flex-col" style="max-width: 220px; width: 100%; height: min(65vh, 480px);">
+                <h3 class="text-sm font-bold uppercase tracking-widest mb-3 text-center text-zinc-400">Move History</h3>
                 <div id="move-history" class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                     <div class="grid grid-cols-[30px_1fr_1fr] gap-x-2 gap-y-1 text-sm font-mono" id="history-content">
                         <!-- Moves will be injected here -->
@@ -185,12 +189,12 @@
             </div>
         </div>
 
-        <div class="w-full max-w-6xl mt-6 flex justify-center">
+        <div class="mt-4 flex justify-center">
             <!-- Game Info Bottom -->
-            <div id="game-info" class="flex flex-wrap justify-center gap-4 text-xs font-semibold uppercase tracking-wider">
-                <div id="role-display" class="px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[120px] text-center">Connecting...</div>
-                <div id="turn-display" class="px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[120px] text-center">Waiting...</div>
-                <div id="spectator-display" class="px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[100px] text-center">Spectators: 0</div>
+            <div id="game-info" class="flex flex-wrap justify-center gap-3 text-xs font-semibold uppercase tracking-wider">
+                <div id="role-display" class="px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[100px] text-center">Connecting...</div>
+                <div id="turn-display" class="px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[100px] text-center">Waiting...</div>
+                <div id="spectator-display" class="px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[90px] text-center">Spectators: 0</div>
             </div>
         </div>
 
@@ -202,25 +206,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js" integrity="sha512-xRllwz2gdZciIB+AkEbeq+gVhX8VB8XsfqeFbUh+SzHlN96dEduwtTuVuc2u9EROlmW9+yhRlxjif66ORpsgVA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="/javascripts/chess_Game.js"></script>
     <script>
-        // Update UI based on game state
         socket.on("playerRole", function (role) {
             document.getElementById("role-display").innerText = "Role: " + (role === "w" ? "White" : "Black");
         });
         socket.on("spectatorRole", function () {
             document.getElementById("role-display").innerText = "Role: Spectator";
         });
-        socket.on("boardState", function (fen) {
-            const turn = fen.split(" ")[1];
-            document.getElementById("turn-display").innerText = "Turn: " + (turn === "w" ? "White" : "Black");
-            document.getElementById("game-over-modal").style.display = "none";
-        });
-        socket.on("move", function (move) {
-            const turn = chess.turn();
-            document.getElementById("turn-display").innerText = "Turn: " + (turn === "w" ? "White" : "Black");
-        });
         socket.on("spectatorCount", function (count) {
             document.getElementById("spectator-display").innerText = "Spectators: " + count;
         });
+        function copyRoomId() {
+            const id = document.getElementById('room-id-text').innerText;
+            navigator.clipboard.writeText(id).then(() => {
+                const btn = document.getElementById('copy-btn');
+                btn.innerText = 'Copied!';
+                setTimeout(() => btn.innerText = 'Copy', 1500);
+            });
+        }
     </script>
     <% } else { %>
     <div class="min-h-screen flex flex-col items-center justify-center p-4">
@@ -253,8 +255,21 @@
             </div>
         </div>
     </div>
+    <!-- Share ID Modal -->
+    <div id="share-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center">
+        <div class="modal-content">
+            <h2 class="text-xl font-bold mb-2 text-white">Room Created!</h2>
+            <p class="text-zinc-400 text-sm mb-4">Share this ID with your friend or spectators:</p>
+            <div class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 mb-4">
+                <span id="share-id" class="text-xl font-mono text-blue-400"></span>
+                <button onclick="copyShareId()" id="share-copy-btn" class="px-3 py-1 rounded bg-zinc-700 hover:bg-zinc-600 text-sm text-zinc-300 transition-colors">Copy</button>
+            </div>
+            <button onclick="goToMatch()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl font-bold hover:scale-105 transition-all text-white">Enter Game &rarr;</button>
+        </div>
+    </div>
     <script>
         const socket = io();
+        let pendingMatchId = null;
         
         function quickMatch() {
             const btn = document.getElementById('quick-match-btn');
@@ -269,8 +284,19 @@
         });
 
         function createGame() {
-            const randomId = Math.random().toString(36).substring(2, 8);
-            window.location.href = '/?matchId=' + randomId;
+            pendingMatchId = Math.random().toString(36).substring(2, 8);
+            document.getElementById('share-id').innerText = pendingMatchId;
+            document.getElementById('share-modal').classList.remove('hidden');
+        }
+        function goToMatch() {
+            if (pendingMatchId) window.location.href = '/?matchId=' + pendingMatchId;
+        }
+        function copyShareId() {
+            navigator.clipboard.writeText(pendingMatchId).then(() => {
+                const btn = document.getElementById('share-copy-btn');
+                btn.innerText = 'Copied!';
+                setTimeout(() => btn.innerText = 'Copy', 1500);
+            });
         }
         function joinGame() {
             const id = document.getElementById('join-match-id').value.trim();

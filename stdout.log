@@ -1,0 +1,10 @@
+[dotenv@17.3.1] injecting env (1) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+Server running on port 3000
+Connected to MongoDB Atlas
+A user connected: jw5PGKn08RCRN_TGAAAB
+A user connected: 0q5MbSK45Ct6ju8iAAAD
+A user connected: g5lNijSHTHJCjLPxAAAF
+User disconnected: g5lNijSHTHJCjLPxAAAF
+A user connected: x7XOPL73jDdahUHfAAAH
+[02qwwh] Game state initialized.
+[02qwwh] Move: e2 -> e4
