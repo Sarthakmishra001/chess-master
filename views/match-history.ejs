@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match History - Chess Master</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #09090b;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-12 px-4">
+    <div class="w-full max-w-4xl">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Match History</h1>
+            <a href="/" class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors border border-zinc-700">Back to Game</a>
+        </div>
+
+        <div class="glass-panel p-6">
+            <% if (matches && matches.length > 0) { %>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
+                                <th class="pb-4 font-semibold">Match ID</th>
+                                <th class="pb-4 font-semibold">Players</th>
+                                <th class="pb-4 font-semibold">Result</th>
+                                <th class="pb-4 font-semibold">Moves</th>
+                                <th class="pb-4 font-semibold">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-800">
+                            <% matches.forEach(match => { %>
+                                <tr class="group hover:bg-white/[0.02] transition-colors">
+                                    <td class="py-4 text-xs font-mono text-zinc-500"><%= match._id.toString().substring(0, 8) %>...</td>
+                                    <td class="py-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-medium text-zinc-200">W: <%= match.player1 %></span>
+                                            <span class="text-sm font-medium text-zinc-400">B: <%= match.player2 %></span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4">
+                                        <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight <%= match.result.includes('White') ? 'bg-blue-500/10 text-blue-400' : match.result.includes('Black') ? 'bg-purple-500/10 text-purple-400' : 'bg-zinc-500/10 text-zinc-400' %>">
+                                            <%= match.result %>
+                                        </span>
+                                    </td>
+                                    <td class="py-4">
+                                        <span class="text-sm text-zinc-500"><%= match.moves.length %> moves</span>
+                                    </td>
+                                    <td class="py-4 text-sm text-zinc-500">
+                                        <%= new Date(match.createdAt).toLocaleDateString() %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <div class="text-center py-12">
+                    <p class="text-zinc-500">No matches found yet. Go play some chess!</p>
+                </div>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html>
