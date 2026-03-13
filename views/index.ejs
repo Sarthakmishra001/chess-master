@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chess Master</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
@@ -131,6 +132,7 @@
     </style>
 </head>
 <body class="text-white">
+    <% if (locals.matchId) { %>
     <!-- Promotion Modal -->
     <div id="promotion-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center">
         <div class="modal-content">
@@ -197,7 +199,6 @@
         </footer>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js" integrity="sha512-xRllwz2gdZciIB+AkEbeq+gVhX8VB8XsfqeFbUh+SzHlN96dEduwtTuVuc2u9EROlmW9+yhRlxjif66ORpsgVA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="/javascripts/chess_Game.js"></script>
     <script>
@@ -221,5 +222,68 @@
             document.getElementById("spectator-display").innerText = "Spectators: " + count;
         });
     </script>
+    <% } else { %>
+    <div class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="glass-panel text-center p-8 w-full max-w-md">
+            <h1 class="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-2">Chess Master</h1>
+            <p class="text-zinc-400 mb-8 text-sm md:text-base">Real-time multiplayer chess</p>
+            
+            <div class="flex gap-4 mb-6">
+                <button onclick="createGame()" class="flex-1 px-4 py-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl font-bold hover:scale-105 transition-all text-white shadow-lg shadow-blue-500/20 text-lg">
+                    Private Room
+                </button>
+                <button id="quick-match-btn" onclick="quickMatch()" class="flex-1 px-4 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl font-bold hover:scale-105 transition-all text-white shadow-lg shadow-emerald-500/20 text-lg">
+                    Quick Match
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-4 mb-6 relative">
+                <hr class="flex-grow border-zinc-700/50">
+                <span class="text-zinc-500 text-xs font-semibold uppercase tracking-wider bg-[#1a1a1a] px-3 absolute left-1/2 -translate-x-1/2 rounded-full">Join Room</span>
+                <hr class="flex-grow border-zinc-700/50">
+            </div>
+            
+            <div class="flex flex-col gap-3">
+                <input type="text" id="join-match-id" placeholder="Paste Match ID here..." class="w-full px-4 py-4 rounded-xl bg-zinc-800/50 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:bg-zinc-800 transition-all text-center font-mono text-lg">
+                <button onclick="joinGame()" class="w-full px-6 py-4 bg-zinc-700 hover:bg-zinc-600 rounded-xl font-bold transition-colors text-white text-lg">Join Game</button>
+            </div>
+
+            <div class="mt-8">
+                <a href="/match-history" class="text-sm border border-zinc-700/50 rounded-full px-6 py-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all inline-block">&larr; View Match History</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        const socket = io();
+        
+        function quickMatch() {
+            const btn = document.getElementById('quick-match-btn');
+            btn.innerText = "Searching...";
+            btn.disabled = true;
+            btn.classList.add("animate-pulse");
+            socket.emit("quickMatch");
+        }
+        
+        socket.on("matchFound", function(matchId) {
+            window.location.href = '/?matchId=' + matchId;
+        });
+
+        function createGame() {
+            const randomId = Math.random().toString(36).substring(2, 8);
+            window.location.href = '/?matchId=' + randomId;
+        }
+        function joinGame() {
+            const id = document.getElementById('join-match-id').value.trim();
+            if (id) {
+                window.location.href = '/?matchId=' + id;
+            } else {
+                alert('Please enter a valid Match ID');
+            }
+        }
+        document.getElementById('join-match-id').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') joinGame();
+        });
+    </script>
+    <% } %>
 </body>
 </html>

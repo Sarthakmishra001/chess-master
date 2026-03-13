@@ -1,9 +1,10 @@
 {
   "name": "chess",
   "version": "1.0.0",
-  "description": "",
+  "description": "Real-time multiplayer chess game",
   "main": "app.js",
   "scripts": {
+    "start": "node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -11,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "chess.js": "^1.0.0-beta.8",
+    "dotenv": "^17.3.1",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
     "mongoose": "^9.3.0",

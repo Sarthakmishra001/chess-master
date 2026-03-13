@@ -1,4 +1,6 @@
+require("dotenv").config();
 const express = require("express");
+
 const socketIo = require("socket.io");
 const path = require("path");
 const http = require("http");
@@ -6,22 +8,24 @@ const { Chess } = require("chess.js");
 const mongoose = require("mongoose");
 const Match = require("./models/Match");
 
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
 // MongoDB Connection
-mongoose.connect("mongodb://localhost:27017/chess")
-  .then(() => console.log("Connected to MongoDB"))
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("Connected to MongoDB Atlas"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
 app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
 
 const games = {};
+let waitingQueue = [];
 
 app.get("/", function (req, res) {
-  res.render("index");
+  res.render("index", { matchId: req.query.matchId });
 });
 
 app.get("/match-history", async function (req, res) {
@@ -39,6 +43,21 @@ io.on("connection", function (uniqueSocket) {
 
   let currentMatchId = null;
 
+  uniqueSocket.on("quickMatch", function () {
+    if (!waitingQueue.includes(uniqueSocket.id)) {
+      waitingQueue.push(uniqueSocket.id);
+    }
+
+    if (waitingQueue.length >= 2) {
+      const player1 = waitingQueue.shift();
+      const player2 = waitingQueue.shift();
+      const randomMatchId = Math.random().toString(36).substring(2, 8);
+      
+      io.to(player1).emit("matchFound", randomMatchId);
+      io.to(player2).emit("matchFound", randomMatchId);
+    }
+  });
+
   const initializeGame = (matchId) => {
     const game = games[matchId];
     if (game && game.intervalId) {
@@ -51,6 +70,8 @@ io.on("connection", function (uniqueSocket) {
       players: game ? game.players : {},
       timer: { w: 300, b: 300 },
       intervalId: null,
+      reconnectTimeoutId: null, // Track 30s gracefully
+      disconnectedRole: null // "white" or "black"
     };
     
     console.log(`[${matchId}] Game state initialized.`);
@@ -84,6 +105,7 @@ io.on("connection", function (uniqueSocket) {
           const reason = `TIME OUT\n${winner} wins!`;
           io.to(matchId).emit("game_over", reason);
           saveMatch(matchId, reason);
+          delete games[matchId];
           console.log(`[${matchId}] Game ended by time out: ${winner} wins`);
         }
       }, 1000);
@@ -100,7 +122,19 @@ io.on("connection", function (uniqueSocket) {
 
     const game = games[currentMatchId];
 
-    // Assign roles if slots are empty
+    // Attempt to reclaim a disconnected role first
+    if (game.disconnectedRole && !game.players[game.disconnectedRole]) {
+       // Stop the timeout
+       if (game.reconnectTimeoutId) {
+         clearTimeout(game.reconnectTimeoutId);
+         game.reconnectTimeoutId = null;
+       }
+       game.players[game.disconnectedRole] = uniqueSocket.id;
+       game.disconnectedRole = null;
+       console.log(`[${currentMatchId}] Player reconnected and reclaimed role.`);
+    }
+
+    // Assign roles if slots are strictly empty
     if (!game.players.white && !Object.values(game.players).includes(uniqueSocket.id)) {
       game.players.white = uniqueSocket.id;
     } else if (!game.players.black && !Object.values(game.players).includes(uniqueSocket.id)) {
@@ -166,22 +200,56 @@ io.on("connection", function (uniqueSocket) {
 
   uniqueSocket.on("disconnect", function () {
     console.log(`User disconnected: ${uniqueSocket.id}`);
+    waitingQueue = waitingQueue.filter(id => id !== uniqueSocket.id);
+    
     if (currentMatchId && games[currentMatchId]) {
       const game = games[currentMatchId];
+      let abandonedRole = null;
+      let winningRole = null;
+
       if (uniqueSocket.id === game.players.white) {
         delete game.players.white;
+        game.disconnectedRole = "white";
+        abandonedRole = "White";
+        winningRole = "Black";
       } else if (uniqueSocket.id === game.players.black) {
         delete game.players.black;
+        game.disconnectedRole = "black";
+        abandonedRole = "Black";
+        winningRole = "White";
       }
 
       updateSpectatorCount(currentMatchId);
 
-      // Stop timer if a player leaves
+      // Stop timer if a player leaves and start 30s reconnect timer
       if (!game.players.white || !game.players.black) {
         if (game.intervalId) {
           clearInterval(game.intervalId);
           game.intervalId = null;
         }
+
+        // Only start the 30s countdown if a player actually abandoned a role
+        if (game.disconnectedRole && !game.reconnectTimeoutId) {
+           console.log(`[${currentMatchId}] Player ${abandonedRole} disconnected, waiting 30s for reconnect...`);
+           game.reconnectTimeoutId = setTimeout(() => {
+             // 30 seconds passed, and still missing player
+             if (games[currentMatchId] && games[currentMatchId].disconnectedRole === abandonedRole.toLowerCase()) {
+                const reason = `FORFEIT\n${abandonedRole} disconnected. ${winningRole} wins!`;
+                io.to(currentMatchId).emit("game_over", reason);
+                saveMatch(currentMatchId, reason);
+                delete games[currentMatchId];
+                console.log(`[${currentMatchId}] Game ends via forfeit. ${winningRole} wins`);
+             }
+           }, 30000); // 30 seconds
+        }
+      }
+
+      const room = io.sockets.adapter.rooms.get(currentMatchId);
+      if (!room || room.size === 0) {
+        // If the room genuinely emptied, cleanup
+        if (game.reconnectTimeoutId) clearTimeout(game.reconnectTimeoutId);
+        delete games[currentMatchId];
+        console.log(`[${currentMatchId}] Room is empty. Game deleted.`);
       }
     }
   });
@@ -232,6 +300,7 @@ io.on("connection", function (uniqueSocket) {
           }
           io.to(currentMatchId).emit("game_over", reason);
           saveMatch(currentMatchId, reason);
+          delete games[currentMatchId];
         }
       } else {
         uniqueSocket.emit("invalidMove", move);
@@ -243,6 +312,8 @@ io.on("connection", function (uniqueSocket) {
   });
 });
 
-server.listen(3000, function () {
-  console.log("Server running on http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, function () {
+  console.log("Server running on port " + PORT);
 });

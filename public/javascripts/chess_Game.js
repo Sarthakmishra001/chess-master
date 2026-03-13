@@ -178,6 +178,11 @@ socket.on("spectatorRole", function () {
 socket.on("boardState", function (fen) {
   chess.load(fen);
   renderBoard();
+  const turn = chess.turn();
+  const turnDisplay = document.getElementById("turn-display");
+  if (turnDisplay) {
+    turnDisplay.innerText = "Turn: " + (turn === "w" ? "White" : "Black");
+  }
 });
 
 socket.on("timerUpdate", function (timers) {
@@ -187,7 +192,7 @@ socket.on("timerUpdate", function (timers) {
 
 socket.on("move", function (move) {
   chess.move(move);
-  renderBoard();
+  // Redundant render removed to prevent UI jitter
 });
 
 const updateTimerDisplay = (id, seconds) => {
@@ -203,16 +208,6 @@ const updateTimerDisplay = (id, seconds) => {
     element.classList.remove("text-red-500", "animate-pulse");
   }
 };
-
-socket.on("boardState", function (fen) {
-  chess.load(fen);
-  renderBoard();
-  const turn = chess.turn();
-  const turnDisplay = document.getElementById("turn-display");
-  if (turnDisplay) {
-    turnDisplay.innerText = "Turn: " + (turn === "w" ? "White" : "Black");
-  }
-});
 
 socket.on("game_over", function (message) {
   document.getElementById("winner-message").innerText = message;
