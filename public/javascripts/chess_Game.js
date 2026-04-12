@@ -88,21 +88,28 @@ const renderMoveHistory = () => {
   const history = moveHistoryData;
   historyElement.innerHTML = "";
 
+  if (history.length === 0) {
+    historyElement.innerHTML = '<div style="color:#3f3f46; text-align:center; padding-top:20px; font-size:0.78rem; font-family:Inter,sans-serif; grid-column:1/-1;">No moves yet…</div>';
+    return;
+  }
+
   for (let i = 0; i < history.length; i += 2) {
     const moveNumber = Math.floor(i / 2) + 1;
     const whiteMove = history[i];
     const blackMove = history[i + 1] || "";
+    const isEven = (moveNumber % 2 === 0);
+    const rowBg = isEven ? 'rgba(255,255,255,0.02)' : 'transparent';
 
     const numDiv = document.createElement("div");
-    numDiv.classList.add("text-zinc-500");
+    numDiv.style.cssText = `color:#52525b; font-size:0.72rem; padding:2px 0; background:${rowBg};`;
     numDiv.innerText = `${moveNumber}.`;
 
     const whiteDiv = document.createElement("div");
-    whiteDiv.classList.add("text-zinc-200");
+    whiteDiv.style.cssText = `color:#e4e4e7; font-size:0.78rem; font-weight:600; padding:2px 0; background:${rowBg};`;
     whiteDiv.innerText = whiteMove;
 
     const blackDiv = document.createElement("div");
-    blackDiv.classList.add("text-zinc-200");
+    blackDiv.style.cssText = `color:#a1a1aa; font-size:0.78rem; padding:2px 0; background:${rowBg};`;
     blackDiv.innerText = blackMove;
 
     historyElement.appendChild(numDiv);
@@ -112,7 +119,7 @@ const renderMoveHistory = () => {
 
   // Scroll to bottom
   const scrollContainer = document.getElementById("move-history");
-  scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
 };
 
 let pendingMove = null;
@@ -207,22 +214,27 @@ socket.on("moveHistory", function (history) {
 
 const updateTimerDisplay = (id, seconds) => {
   const element = document.getElementById(id);
+  if (!element) return;
   const minutes = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  const label = id.includes("white") ? "White" : "Black";
-  element.innerText = `${label}: ${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-  
+  element.innerText = `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
   if (seconds < 30) {
-    element.classList.add("text-red-500", "animate-pulse");
+    element.style.color = '#ef4444';
+    element.style.animation = 'pulse 1s cubic-bezier(0.4,0,0.6,1) infinite';
   } else {
-    element.classList.remove("text-red-500", "animate-pulse");
+    element.style.color = '';
+    element.style.animation = '';
   }
 };
 
 socket.on("game_over", function (message) {
   document.getElementById("winner-message").innerText = message;
-  document.getElementById("game-over-modal").style.display = "flex";
-  
+  // Support both old style (display:flex) and new class-based modal
+  const modal = document.getElementById("game-over-modal");
+  modal.style.display = "flex";
+  modal.classList.add("show");
+
   const pieces = document.querySelectorAll(".piece");
   pieces.forEach(piece => {
     piece.draggable = false;

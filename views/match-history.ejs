@@ -3,94 +3,295 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Match History - Chess Master</title>
+    <title>Match History — Chess Master</title>
+    <meta name="description" content="Review all past chess games, results, and move counts on Chess Master.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --gold: #f5c842;
+            --bg-deep: #09090b;
+            --bg-card: rgba(20, 20, 25, 0.85);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(245, 200, 66, 0.2);
+        }
+
         body {
-            background-color: #09090b;
-            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-deep);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* Ambient blobs */
+        .blob { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.14; pointer-events: none; z-index: 0; }
+        .blob-1 { width: 500px; height: 500px; background: #6366f1; top: -150px; left: -150px; }
+        .blob-2 { width: 400px; height: 400px; background: #a855f7; bottom: -100px; right: -100px; }
+
+        .grad-text {
+            background: linear-gradient(135deg, #a78bfa, #818cf8, #38bdf8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .gold-text {
+            background: linear-gradient(135deg, #f5c842, #f97316);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        .glass {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+
+        /* Table rows */
+        .match-row {
+            transition: background 0.2s ease;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .match-row:last-child { border-bottom: none; }
+        .match-row:hover { background: rgba(255,255,255,0.03); }
+
+        /* Result badges */
+        .badge-win-white  { background: rgba(99,102,241,0.12);  border: 1px solid rgba(99,102,241,0.3);  color: #818cf8; }
+        .badge-win-black  { background: rgba(168,85,247,0.12);  border: 1px solid rgba(168,85,247,0.3);  color: #c084fc; }
+        .badge-draw       { background: rgba(113,113,122,0.12); border: 1px solid rgba(113,113,122,0.3); color: #a1a1aa; }
+        .badge-time       { background: rgba(245,158,11,0.12);  border: 1px solid rgba(245,158,11,0.3);  color: #fbbf24; }
+        .badge-forfeit    { background: rgba(239,68,68,0.12);   border: 1px solid rgba(239,68,68,0.3);   color: #f87171; }
+
+        .result-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 8px;
+            font-size: 0.68rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.07em;
+            white-space: nowrap;
+        }
+
+        /* Stats mini cards */
+        .stat-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 16px 20px;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .stat-icon {
+            font-size: 1.6rem; width: 44px; height: 44px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 10px;
+        }
+
+        /* Banner overlay */
+        .banner-img-wrap {
+            position: relative; border-radius: 18px; overflow: hidden;
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .banner-img-wrap img {
+            width: 100%; height: 200px; object-fit: cover; display: block;
+            filter: brightness(0.6);
+        }
+        .banner-img-wrap::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(to right, rgba(9,9,11,0.8) 0%, rgba(9,9,11,0.3) 60%, rgba(9,9,11,0.0) 100%);
+        }
+        .banner-content {
+            position: absolute; inset: 0; z-index: 2;
+            display: flex; flex-direction: column; justify-content: center;
+            padding: 28px 32px;
+        }
+
+        .btn-ghost {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 9px 18px; border-radius: 11px;
+            background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle);
+            color: #d4d4d8; font-weight: 600; font-size: 0.82rem;
+            text-decoration: none; transition: all 0.2s ease; white-space: nowrap;
             font-family: 'Inter', sans-serif;
         }
-        .glass-panel {
-            background: rgba(24, 24, 27, 0.6);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.18); color: #fff; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-12 px-4">
-    <div class="w-full max-w-4xl">
-        <div class="flex items-center justify-between mb-8">
-            <div>
-                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Match History</h1>
-                <% if (locals.filterMatchId) { %>
-                    <p class="text-zinc-500 text-sm mt-1">Showing matches for room: <span class="font-mono text-blue-400"><%= filterMatchId %></span></p>
-                <% } %>
-            </div>
-            <div class="flex gap-2">
-                <% if (locals.filterMatchId) { %>
-                    <a href="/match-history" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors border border-zinc-700">All Matches</a>
-                <% } %>
-                <a href="/" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors border border-zinc-700">Back to Game</a>
-            </div>
-        </div>
+<body>
+    <!-- Ambient blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
 
-        <div class="glass-panel p-6">
+    <div style="min-height:100vh; display:flex; flex-direction:column; position:relative; z-index:1;">
+
+        <!-- Navbar -->
+        <nav style="padding:14px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle); background:rgba(9,9,11,0.7); backdrop-filter:blur(16px); position:sticky; top:0; z-index:50;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img src="/images/chess_king_icon.png" alt="Chess Master" style="width:34px; height:34px; object-fit:contain; border-radius:8px;">
+                <a href="/" style="font-family:'Playfair Display', serif; font-size:1.2rem; font-weight:700; color:#fff; text-decoration:none;">
+                    Chess <span class="gold-text">Master</span>
+                </a>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <% if (locals.filterMatchId) { %>
+                    <a href="/match-history" class="btn-ghost">All Matches</a>
+                <% } %>
+                <a href="/" class="btn-ghost">← Back to Game</a>
+            </div>
+        </nav>
+
+        <main style="flex:1; max-width:1000px; width:100%; margin:0 auto; padding:32px 20px 60px;">
+
+            <!-- Hero Banner -->
+            <div class="banner-img-wrap" style="margin-bottom:32px;">
+                <img src="/images/chess_hero_banner.png" alt="Chess pieces">
+                <div class="banner-content">
+                    <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#a1a1aa; margin-bottom:6px;">📜 Archive</div>
+                    <h1 style="font-family:'Playfair Display', serif; font-size:2rem; font-weight:900; margin-bottom:6px; line-height:1.2;">
+                        Match History
+                    </h1>
+                    <% if (locals.filterMatchId) { %>
+                        <p style="font-size:0.85rem; color:#a1a1aa;">
+                            Showing results for room: <span style="font-family:monospace; color:#818cf8; font-weight:700;"><%= filterMatchId %></span>
+                        </p>
+                    <% } else { %>
+                        <p style="font-size:0.85rem; color:#a1a1aa;">All recorded games — most recent first.</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Stats row -->
             <% if (matches && matches.length > 0) { %>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:28px;">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(99,102,241,0.12); font-size:1.4rem;">🎮</div>
+                    <div>
+                        <div style="font-size:1.4rem; font-weight:800; line-height:1;"><%= matches.length %></div>
+                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">Total Games</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(245,200,66,0.10);">♟️</div>
+                    <div>
+                        <div style="font-size:1.4rem; font-weight:800; line-height:1;">
+                            <%= Math.round(matches.reduce((sum, m) => sum + m.moves.length, 0) / matches.length) %>
+                        </div>
+                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">Avg Moves</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(168,85,247,0.10);">🏆</div>
+                    <div>
+                        <div style="font-size:1.4rem; font-weight:800; line-height:1;">
+                            <%= matches.filter(m => m.result.toLowerCase().includes('checkmate')).length %>
+                        </div>
+                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">Checkmates</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background:rgba(16,185,129,0.10);">🤝</div>
+                    <div>
+                        <div style="font-size:1.4rem; font-weight:800; line-height:1;">
+                            <%= matches.filter(m => {const r = m.result.toLowerCase(); return r.includes('draw') || r.includes('stalemate') || r.includes('repetition') || r.includes('insufficient');}).length %>
+                        </div>
+                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">Draws</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matches table card -->
+            <div class="glass" style="padding:0; overflow:hidden;">
+                <!-- Table header -->
+                <div style="padding:18px 24px; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;">
+                    <h2 style="font-size:0.9rem; font-weight:700; color:#e4e4e7;">All Matches</h2>
+                    <span style="font-size:0.75rem; color:#52525b;"><%= matches.length %> game<%= matches.length !== 1 ? 's' : '' %> recorded</span>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse;">
                         <thead>
-                            <tr class="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
-                                <th class="pb-4 font-semibold">Match ID</th>
-                                <th class="pb-4 font-semibold">Players</th>
-                                <th class="pb-4 font-semibold">Result</th>
-                                <th class="pb-4 font-semibold">Moves</th>
-                                <th class="pb-4 font-semibold">Date</th>
+                            <tr style="background:rgba(255,255,255,0.02);">
+                                <th style="padding:12px 24px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">#</th>
+                                <th style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Match ID</th>
+                                <th style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Players</th>
+                                <th style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Result</th>
+                                <th style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Moves</th>
+                                <th style="padding:12px 24px 12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Date</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-800">
-                            <% matches.forEach(match => { %>
-                                <tr class="group hover:bg-white/[0.02] transition-colors">
-                                    <td class="py-4 text-xs font-mono text-blue-400"><%= match.matchId %></td>
-                                    <td class="py-4">
-                                        <div class="flex flex-col">
-                                            <span class="text-sm font-medium text-zinc-200">White</span>
-                                            <span class="text-sm font-medium text-zinc-400">Black</span>
+                        <tbody>
+                            <% matches.forEach((match, idx) => {
+                                const r = match.result.toLowerCase();
+                                let badgeClass = 'badge-draw';
+                                let resultIcon = '🤝';
+                                if (r.includes('white wins') || r.includes('white')) { badgeClass = 'badge-win-white'; resultIcon = '♔'; }
+                                else if (r.includes('black wins') || r.includes('black')) { badgeClass = 'badge-win-black'; resultIcon = '♚'; }
+                                if (r.includes('time out')) { badgeClass = 'badge-time'; resultIcon = '⏱️'; }
+                                if (r.includes('forfeit')) { badgeClass = 'badge-forfeit'; resultIcon = '🏳️'; }
+                            %>
+                            <tr class="match-row">
+                                <td style="padding:16px 24px; font-size:0.75rem; color:#52525b; font-weight:600;"><%= idx + 1 %></td>
+                                <td style="padding:16px;">
+                                    <a href="/match-history?matchId=<%= match.matchId %>" style="font-family:monospace; font-size:0.8rem; color:#818cf8; text-decoration:none; font-weight:700; background:rgba(99,102,241,0.08); padding:3px 8px; border-radius:6px; border:1px solid rgba(99,102,241,0.2); transition:all 0.2s;"
+                                       onmouseover="this.style.background='rgba(99,102,241,0.15)'"
+                                       onmouseout="this.style.background='rgba(99,102,241,0.08)'">
+                                        <%= match.matchId %>
+                                    </a>
+                                </td>
+                                <td style="padding:16px;">
+                                    <div style="display:flex; flex-direction:column; gap:4px;">
+                                        <div style="display:flex; align-items:center; gap:6px;">
+                                            <span style="font-size:0.9rem;">♔</span>
+                                            <span style="font-size:0.8rem; color:#e4e4e7; font-weight:500;">White</span>
                                         </div>
-                                    </td>
-                                    <td class="py-4">
-                                        <span class="px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-tight <%= match.result.includes('White') ? 'bg-blue-500/10 text-blue-400' : match.result.includes('Black') ? 'bg-purple-500/10 text-purple-400' : 'bg-zinc-500/10 text-zinc-400' %>">
-                                            <%= match.result %>
-                                        </span>
-                                    </td>
-                                    <td class="py-4">
-                                        <span class="text-sm text-zinc-500"><%= match.moves.length %> moves</span>
-                                    </td>
-                                    <td class="py-4 text-sm text-zinc-500">
-                                        <%= new Date(match.createdAt).toLocaleDateString() %>
-                                    </td>
-                                </tr>
+                                        <div style="display:flex; align-items:center; gap:6px;">
+                                            <span style="font-size:0.9rem;">♚</span>
+                                            <span style="font-size:0.8rem; color:#a1a1aa; font-weight:500;">Black</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td style="padding:16px;">
+                                    <span class="result-badge <%= badgeClass %>">
+                                        <%= resultIcon %> <%= match.result.replace(/\n/g, ' ') %>
+                                    </span>
+                                </td>
+                                <td style="padding:16px;">
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <div style="width:32px; height:4px; border-radius:2px; background:linear-gradient(90deg, #6366f1, #a855f7); opacity:<%= Math.min(match.moves.length / 80, 1) %>;"></div>
+                                        <span style="font-size:0.82rem; color:#a1a1aa; font-weight:500;"><%= match.moves.length %></span>
+                                    </div>
+                                </td>
+                                <td style="padding:16px 24px 16px 16px; font-size:0.8rem; color:#71717a;">
+                                    <%= new Date(match.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                                </td>
+                            </tr>
                             <% }) %>
                         </tbody>
                     </table>
                 </div>
+            </div>
+
             <% } else { %>
-                <div class="text-center py-12">
-                    <p class="text-zinc-500">No matches found yet. Go play some chess!</p>
-                </div>
+            <!-- Empty state -->
+            <div class="glass" style="padding:64px 32px; text-align:center;">
+                <img src="/images/chess_board_topdown.png" alt="Chess board" style="width:200px; height:120px; object-fit:cover; border-radius:14px; margin:0 auto 24px; opacity:0.5; display:block; border:1px solid var(--border-subtle);">
+                <div style="font-size:2.5rem; margin-bottom:12px;">♟️</div>
+                <h2 style="font-size:1.3rem; font-weight:800; margin-bottom:8px; color:#e4e4e7;">No matches yet</h2>
+                <p style="color:#71717a; font-size:0.88rem; margin-bottom:24px;">Games will appear here once you finish a match.</p>
+                <a href="/" style="display:inline-block; padding:12px 28px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border-radius:12px; text-decoration:none; font-weight:700; font-size:0.9rem; box-shadow:0 8px 24px rgba(99,102,241,0.3);">Start Playing →</a>
+            </div>
             <% } %>
-        </div>
+        </main>
+
+        <footer style="padding:20px; text-align:center; border-top:1px solid var(--border-subtle); color:#3f3f46; font-size:0.75rem;">
+            Developed with ❤️ by <strong style="color:#71717a;">Sarthak Mishra</strong> · Chess Master
+        </footer>
     </div>
 </body>
 </html>

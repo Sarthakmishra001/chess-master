@@ -3,203 +3,426 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Master</title>
+    <title>Chess Master — Real-time Multiplayer Chess</title>
+    <meta name="description" content="Play real-time multiplayer chess with friends. Create private rooms, find quick matches, and track your game history.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --gold: #f5c842;
+            --gold-dim: #c8991f;
+            --bg-deep: #09090b;
+            --bg-card: rgba(20, 20, 25, 0.85);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(245, 200, 66, 0.25);
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+            background: var(--bg-deep);
+            color: #fff;
+            min-height: 100vh;
             overflow-x: hidden;
         }
 
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            width: 100%;
-            padding: 0.5rem !important;
+        /* ─── Ambient blobs ───────────────────────────────── */
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.18;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .blob-1 { width: 600px; height: 600px; background: #6366f1; top: -200px; left: -200px; }
+        .blob-2 { width: 500px; height: 500px; background: #a855f7; bottom: -150px; right: -150px; }
+        .blob-3 { width: 350px; height: 350px; background: var(--gold); top: 40%; left: 40%; opacity: 0.08; }
+
+        /* ─── Glass panel ─────────────────────────────────── */
+        .glass {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+        }
+        .glass-gold {
+            border-color: var(--border-glow);
+            box-shadow: 0 0 40px rgba(245, 200, 66, 0.08), 0 20px 60px rgba(0,0,0,0.5);
         }
 
+        /* ─── Gradient text ───────────────────────────────── */
+        .grad-text {
+            background: linear-gradient(135deg, #a78bfa 0%, #818cf8 40%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .gold-text {
+            background: linear-gradient(135deg, #f5c842, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* ─── Chessboard ──────────────────────────────────── */
         .chessboard {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
             width: 100%;
             aspect-ratio: 1 / 1;
-            margin: 0 auto;
-            border: 6px solid #2d2d2d;
-            border-radius: 8px;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-            background-color: #1a1a1a;
+            box-shadow: 0 0 0 4px #2d2d2d, 0 30px 80px rgba(0,0,0,0.8), 0 0 60px rgba(99, 102, 241, 0.15);
         }
+        .square { display: flex; align-items: center; justify-content: center; }
+        .square.light { background-color: #f0d9b5; }
+        .square.dark  { background-color: #b58863; }
 
-        .square {
+        .piece { font-size: clamp(22px, 5.5vw, 44px); cursor: move; transition: transform 0.15s ease; user-select: none; }
+        .piece:hover { transform: scale(1.12); filter: drop-shadow(0 4px 12px rgba(245,200,66,0.4)); }
+        .piece.white { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.7); }
+        .piece.black { color: #111; filter: drop-shadow(0 1px 2px rgba(255,255,255,0.3)); }
+
+        .flipped { transform: rotate(180deg); }
+        .flipped .piece { transform: rotate(180deg); }
+        .dragging { opacity: 0.5; }
+
+        /* ─── Custom Scrollbar ────────────────────────────── */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); border-radius: 2px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+        /* ─── Timer ───────────────────────────────────────── */
+        .timer-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-family: 'Inter', monospace;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: 0.05em;
+            border: 1px solid var(--border-subtle);
+            transition: all 0.3s ease;
+        }
+        .timer-white { background: rgba(255,255,255,0.08); box-shadow: 0 0 20px rgba(255,255,255,0.05); }
+        .timer-black { background: rgba(0,0,0,0.5); box-shadow: 0 0 20px rgba(0,0,0,0.3); }
+        .timer-icon { font-size: 1.4rem; }
+
+        /* ─── Player card ─────────────────────────────────── */
+        .player-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border-subtle);
+        }
+        .player-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
         }
+        .avatar-white { background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.3); }
+        .avatar-black { background: rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.15); }
 
-        .square.light {
-            background-color: #f0d9b5;
-        }
+        /* ─── Move history ────────────────────────────────── */
+        .move-row-even { background: rgba(255,255,255,0.02); }
+        .move-row-odd  { background: transparent; }
 
-        .square.dark {
-            background-color: #b58863;
-        }
-
-        .piece {
-            font-size: clamp(22px, 5.5vw, 46px);
-            cursor: move;
-            transition: transform 0.2s ease;
-            user-select: none;
-        }
-
-        .piece:hover {
-            transform: scale(1.1);
-        }
-
-        .piece.white {
-            color: #ffffff;
-            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
-        }
-
-        .piece.black {
-            color: #1a1a1a;
-            filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.3));
-        }
-
-        .flipped {
-            transform: rotate(180deg);
-        }
-
-        .flipped .piece {
-            transform: rotate(180deg);
-        }
-
-        .dragging {
-            opacity: 0.5;
-        }
-
-        /* Custom Scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-        /* Game Over Modal */
-        #game-over-modal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(8px);
+        /* ─── Modals ──────────────────────────────────────── */
+        .modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(12px);
             z-index: 100;
+            display: none;
             align-items: center;
             justify-content: center;
         }
-
-        .modal-content {
-            background: rgba(30, 30, 30, 0.95);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            padding: 3rem;
+        .modal-backdrop.show { display: flex; }
+        .modal-box {
+            background: rgba(18, 18, 24, 0.98);
+            border: 1px solid var(--border-subtle);
             border-radius: 24px;
+            padding: 2.5rem 2rem;
             text-align: center;
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-            max-width: 400px;
+            max-width: 420px;
             width: 90%;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 60px rgba(99,102,241,0.1);
+            animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
         }
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.85) translateY(20px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* ─── Lobby feature cards ─────────────────────────── */
+        .feature-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            transition: all 0.25s ease;
+        }
+        .feature-card:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-2px);
+        }
+        .feature-icon {
+            font-size: 1.8rem;
+            flex-shrink: 0;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+        }
+
+        /* ─── Lobby hero image overlay ────────────────────── */
+        .hero-image-container {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 0 1px var(--border-subtle);
+        }
+        .hero-image-container::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(9,9,11,0) 40%, rgba(9,9,11,0.9) 100%);
+        }
+        .hero-image-container img {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            display: block;
+        }
+        .hero-image-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px;
+            z-index: 1;
+        }
+
+        /* ─── Status badges ───────────────────────────────── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .badge-role { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); color: #818cf8; }
+        .badge-turn { background: rgba(245,200,66,0.12); border: 1px solid rgba(245,200,66,0.3); color: #f5c842; }
+        .badge-spectator { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
+
+        /* ─── Pulse dot ───────────────────────────────────── */
+        .dot-live { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0.4)} 50%{box-shadow:0 0 0 6px rgba(34,197,94,0)} }
+
+        /* ─── Btn styles ──────────────────────────────────── */
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none; color: white; font-weight: 700;
+            padding: 14px 24px; border-radius: 14px;
+            cursor: pointer; transition: all 0.25s ease;
+            box-shadow: 0 8px 24px rgba(99,102,241,0.35);
+            font-family: 'Inter', sans-serif; font-size: 1rem;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(99,102,241,0.5); filter: brightness(1.1); }
+        .btn-primary:active { transform: translateY(0); }
+
+        .btn-green {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none; color: white; font-weight: 700;
+            padding: 14px 24px; border-radius: 14px;
+            cursor: pointer; transition: all 0.25s ease;
+            box-shadow: 0 8px 24px rgba(16,185,129,0.35);
+            font-family: 'Inter', sans-serif; font-size: 1rem;
+        }
+        .btn-green:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(16,185,129,0.5); filter: brightness(1.1); }
+
+        .btn-ghost {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--border-subtle);
+            color: #d4d4d8; font-weight: 600;
+            padding: 12px 20px; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif; font-size: 0.9rem;
+        }
+        .btn-ghost:hover { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.2); color: #fff; }
+
+        /* ─── Promotion modal pieces ──────────────────────── */
+        .promo-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 16px 20px; background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-subtle); border-radius: 14px;
+            cursor: pointer; transition: all 0.2s ease; color: #fff;
+            font-size: 2.4rem;
+        }
+        .promo-btn:hover {
+            background: rgba(245,200,66,0.1);
+            border-color: rgba(245,200,66,0.4);
+            transform: translateY(-4px) scale(1.05);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.4);
+        }
+        .promo-btn span { font-size: 0.65rem; font-weight: 700; color: #71717a; letter-spacing: 0.1em; text-transform: uppercase; }
     </style>
 </head>
-<body class="text-white">
+<body>
+    <!-- Ambient blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
     <% if (locals.matchId) { %>
+    <!-- ══════════════════════════════════════════ GAME VIEW ══════════════════════════════ -->
+
     <!-- Promotion Modal -->
-    <div id="promotion-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center">
-        <div class="modal-content">
-            <h2 class="text-2xl font-bold mb-6 text-white">Choose Promotion</h2>
-            <div class="flex gap-4 justify-center">
-                <button onclick="selectPromotion('q')" class="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-4xl transition-all hover:scale-110">♕</button>
-                <button onclick="selectPromotion('r')" class="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-4xl transition-all hover:scale-110">♖</button>
-                <button onclick="selectPromotion('b')" class="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-4xl transition-all hover:scale-110">♗</button>
-                <button onclick="selectPromotion('n')" class="p-4 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-4xl transition-all hover:scale-110">♘</button>
+    <div id="promotion-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal-box">
+            <div style="font-size:2.5rem; margin-bottom:0.5rem;">♟️</div>
+            <h2 style="font-size:1.4rem; font-weight:800; margin-bottom:0.4rem;">Pawn Promotion</h2>
+            <p style="color:#71717a; font-size:0.85rem; margin-bottom:1.5rem;">Choose the piece to promote your pawn to</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px;">
+                <button onclick="selectPromotion('q')" class="promo-btn">♕<span>Queen</span></button>
+                <button onclick="selectPromotion('r')" class="promo-btn">♖<span>Rook</span></button>
+                <button onclick="selectPromotion('b')" class="promo-btn">♗<span>Bishop</span></button>
+                <button onclick="selectPromotion('n')" class="promo-btn">♘<span>Knight</span></button>
             </div>
         </div>
     </div>
 
     <!-- Game Over Modal -->
-    <div id="game-over-modal">
-        <div class="modal-content">
-            <h2 class="text-3xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-orange-500">Game Over</h2>
-            <p id="winner-message" class="text-xl mb-8 text-zinc-300"></p>
-            <button onclick="resetGame()" class="px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full font-bold hover:scale-105 transition-transform">Play Again</button>
+    <div id="game-over-modal" class="modal-backdrop">
+        <div class="modal-box">
+            <div style="font-size:3rem; margin-bottom:0.75rem;">🏆</div>
+            <h2 class="gold-text" style="font-size:1.8rem; font-weight:900; margin-bottom:0.5rem;">Game Over</h2>
+            <div style="width:60px; height:3px; background:linear-gradient(90deg,#f5c842,#f97316); border-radius:2px; margin:0 auto 1.2rem;"></div>
+            <p id="winner-message" style="font-size:1.05rem; color:#d4d4d8; margin-bottom:2rem; line-height:1.6; white-space:pre-line;"></p>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button onclick="resetGame()" class="btn-primary" style="width:100%;">⚡ Play Again</button>
+            </div>
         </div>
     </div>
 
-    <div class="min-h-screen flex flex-col items-center justify-center p-4">
-        <header class="mb-3 text-center">
-            <h1 class="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Chess Master</h1>
-            <div class="mt-2 flex items-center justify-center gap-4">
-                <a href="/match-history?matchId=<%= locals.matchId %>" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4">Match History</a>
-                <div class="flex items-center gap-2 px-3 py-1 rounded-lg bg-zinc-800/60 border border-zinc-700/50">
-                    <span class="text-[10px] text-zinc-500 uppercase tracking-wider">Room</span>
-                    <span id="room-id-text" class="text-xs font-mono text-blue-400"><%= locals.matchId %></span>
-                    <button onclick="copyRoomId()" id="copy-btn" class="text-[10px] px-2 py-0.5 rounded bg-zinc-700 hover:bg-zinc-600 text-zinc-300 transition-colors">Copy</button>
+    <!-- ── GAME LAYOUT ─────────────────────────────────────────────────────── -->
+    <div style="min-height:100vh; display:flex; flex-direction:column; position:relative; z-index:1;">
+
+        <!-- Top nav bar -->
+        <nav style="padding:14px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle); background:rgba(9,9,11,0.7); backdrop-filter:blur(16px); position:sticky; top:0; z-index:50;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img src="/images/chess_king_icon.png" alt="Chess Master Logo" style="width:36px; height:36px; object-fit:contain; border-radius:8px;">
+                <a href="/" style="font-family:'Playfair Display', serif; font-size:1.25rem; font-weight:700; color:#fff; text-decoration:none;">
+                    Chess <span class="gold-text">Master</span>
+                </a>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle);">
+                    <div class="dot-live"></div>
+                    <span style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.08em;">Room</span>
+                    <span id="room-id-text" style="font-family:monospace; font-size:0.8rem; color:#818cf8;"><%= locals.matchId %></span>
+                    <button onclick="copyRoomId()" id="copy-btn" style="font-size:0.65rem; padding:3px 8px; border-radius:6px; background:rgba(255,255,255,0.08); border:none; color:#d4d4d8; cursor:pointer; font-family:'Inter',sans-serif;">Copy</button>
+                </div>
+                <a href="/match-history?matchId=<%= locals.matchId %>" style="padding:7px 14px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); font-size:0.78rem; color:#a1a1aa; text-decoration:none; font-weight:500; transition:all 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#a1a1aa'">📜 History</a>
+            </div>
+        </nav>
+
+        <!-- Main game area -->
+        <main style="flex:1; display:flex; flex-direction:column; align-items:center; padding:20px 16px 32px; gap:16px;">
+
+            <!-- Player info + timers row -->
+            <div style="width:100%; max-width:900px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <!-- White player card -->
+                <div class="player-card">
+                    <div class="player-avatar avatar-white">♔</div>
+                    <div>
+                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.08em;">White</div>
+                        <div id="white-timer" style="font-size:1.15rem; font-weight:800; font-family:monospace; color:#fff;">05:00</div>
+                    </div>
+                </div>
+
+                <!-- Center status badges -->
+                <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <div id="turn-display" style="font-size:0.72rem; font-weight:700; color:#f5c842; text-transform:uppercase; letter-spacing:0.1em; padding:4px 12px; border-radius:20px; background:rgba(245,200,66,0.1); border:1px solid rgba(245,200,66,0.2);">Waiting…</div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span id="role-display" class="badge badge-role">Connecting…</span>
+                        <span id="spectator-display" class="badge badge-spectator">👁 0</span>
+                    </div>
+                </div>
+
+                <!-- Black player card -->
+                <div class="player-card">
+                    <div style="font-size:1.15rem; font-weight:800; font-family:monospace; color:#e2e8f0;" id="black-timer">05:00</div>
+                    <div style="text-align:right;">
+                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.08em;">Black</div>
+                    </div>
+                    <div class="player-avatar avatar-black">♚</div>
                 </div>
             </div>
-        </header>
 
-        <div class="mb-3 flex gap-6 text-base font-mono font-bold tracking-wider">
-            <div id="white-timer" class="px-3 py-1 rounded bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]">White: 05:00</div>
-            <div id="black-timer" class="px-3 py-1 rounded bg-black text-white border border-zinc-700 shadow-[0_0_15px_rgba(0,0,0,0.5)]">Black: 05:00</div>
-        </div>
+            <!-- Board + Move history -->
+            <div style="width:100%; max-width:900px; display:flex; flex-direction:row; align-items:flex-start; justify-content:center; gap:16px; flex-wrap:wrap;">
 
-        <div class="w-full flex flex-col md:flex-row items-center md:items-start justify-center gap-4" style="max-width: 900px;">
-            <!-- Chessboard Container -->
-            <div class="glass-panel" style="max-width: min(65vh, 480px); flex-shrink: 0;">
-                <div class="chessboard"></div>
-            </div>
+                <!-- Chessboard Panel -->
+                <div class="glass" style="padding:10px; border-radius:16px; flex-shrink:0; width:min(65vh,480px); max-width:100%;">
+                    <div class="chessboard"></div>
+                </div>
 
-            <!-- Move History Sidebar -->
-            <div class="glass-panel flex flex-col" style="max-width: 220px; width: 100%; height: min(65vh, 480px);">
-                <h3 class="text-sm font-bold uppercase tracking-widest mb-3 text-center text-zinc-400">Move History</h3>
-                <div id="move-history" class="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                    <div class="grid grid-cols-[30px_1fr_1fr] gap-x-2 gap-y-1 text-sm font-mono" id="history-content">
-                        <!-- Moves will be injected here -->
+                <!-- Right sidebar -->
+                <div style="display:flex; flex-direction:column; gap:12px; width:220px; flex-shrink:0; max-width:100%;">
+
+                    <!-- Board art image -->
+                    <div style="border-radius:14px; overflow:hidden; border:1px solid var(--border-subtle); flex-shrink:0;">
+                        <img src="/images/chess_board_topdown.png" alt="Chess board view" style="width:100%; height:100px; object-fit:cover; display:block; opacity:0.75;">
+                    </div>
+
+                    <!-- Move History -->
+                    <div class="glass" style="display:flex; flex-direction:column; border-radius:16px; padding:14px 12px; height:min(44vh,320px);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                            <h3 style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#71717a;">Move History</h3>
+                            <span style="font-size:0.65rem; color:#52525b;">SAN notation</span>
+                        </div>
+                        <div id="move-history" style="flex:1; overflow-y:auto; padding-right:4px;" class="custom-scrollbar">
+                            <div style="display:grid; grid-template-columns:26px 1fr 1fr; gap:2px 6px; font-size:0.8rem; font-family:monospace;" id="history-content">
+                                <div style="color:#3f3f46; text-align:center; grid-column:1/-1; padding-top:20px; font-size:0.78rem; font-family:'Inter',sans-serif;">No moves yet…</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="mt-4 flex justify-center">
-            <!-- Game Info Bottom -->
-            <div id="game-info" class="flex flex-wrap justify-center gap-3 text-xs font-semibold uppercase tracking-wider">
-                <div id="role-display" class="px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[100px] text-center">Connecting...</div>
-                <div id="turn-display" class="px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[100px] text-center">Waiting...</div>
-                <div id="spectator-display" class="px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-zinc-700/50 backdrop-blur-md shadow-lg min-w-[90px] text-center">Spectators: 0</div>
-            </div>
-        </div>
+        </main>
 
-        <footer class="mt-8 text-zinc-500 text-xs">
-            Developed by Sarthak❤️ for Chess Lovers.
+        <!-- Footer -->
+        <footer style="padding:16px 24px; text-align:center; border-top:1px solid var(--border-subtle); color:#3f3f46; font-size:0.75rem;">
+            Developed with ❤️ by <strong style="color:#71717a;">Sarthak Mishra</strong> · Chess Master
         </footer>
     </div>
 
@@ -207,13 +430,13 @@
     <script src="/javascripts/chess_Game.js"></script>
     <script>
         socket.on("playerRole", function (role) {
-            document.getElementById("role-display").innerText = "Role: " + (role === "w" ? "White" : "Black");
+            document.getElementById("role-display").innerText = (role === "w" ? "♔ Playing White" : "♚ Playing Black");
         });
         socket.on("spectatorRole", function () {
-            document.getElementById("role-display").innerText = "Role: Spectator";
+            document.getElementById("role-display").innerText = "👁 Spectating";
         });
         socket.on("spectatorCount", function (count) {
-            document.getElementById("spectator-display").innerText = "Spectators: " + count;
+            document.getElementById("spectator-display").innerText = "👁 " + count;
         });
         function copyRoomId() {
             const id = document.getElementById('room-id-text').innerText;
@@ -225,71 +448,155 @@
         }
     </script>
     <% } else { %>
-    <div class="min-h-screen flex flex-col items-center justify-center p-4">
-        <div class="glass-panel text-center p-8 w-full max-w-md">
-            <h1 class="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-2">Chess Master</h1>
-            <p class="text-zinc-400 mb-8 text-sm md:text-base">Real-time multiplayer chess</p>
-            
-            <div class="flex gap-4 mb-6">
-                <button onclick="createGame()" class="flex-1 px-4 py-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl font-bold hover:scale-105 transition-all text-white shadow-lg shadow-blue-500/20 text-lg">
-                    Private Room
-                </button>
-                <button id="quick-match-btn" onclick="quickMatch()" class="flex-1 px-4 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl font-bold hover:scale-105 transition-all text-white shadow-lg shadow-emerald-500/20 text-lg">
-                    Quick Match
-                </button>
+    <!-- ══════════════════════════════════════════ LOBBY VIEW ═════════════════════════════── -->
+
+    <!-- Share ID Modal -->
+    <div id="share-modal" class="modal-backdrop">
+        <div class="modal-box">
+            <div style="font-size:2.5rem; margin-bottom:0.75rem;">🔗</div>
+            <h2 style="font-size:1.4rem; font-weight:800; margin-bottom:0.4rem;">Room Created!</h2>
+            <p style="color:#71717a; font-size:0.85rem; margin-bottom:1.2rem;">Share this code with your friend — they'll join as Black.</p>
+            <div style="display:flex; align-items:center; justify-content:center; gap:10px; padding:14px 18px; border-radius:14px; background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); margin-bottom:1.2rem;">
+                <span id="share-id" style="font-family:monospace; font-size:1.5rem; color:#818cf8; font-weight:800; letter-spacing:0.1em;"></span>
+                <button onclick="copyShareId()" id="share-copy-btn" style="padding:5px 12px; border-radius:8px; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); color:#818cf8; cursor:pointer; font-size:0.78rem; font-weight:600; font-family:'Inter',sans-serif;">Copy</button>
             </div>
-            
-            <div class="flex items-center gap-4 mb-6 relative">
-                <hr class="flex-grow border-zinc-700/50">
-                <span class="text-zinc-500 text-xs font-semibold uppercase tracking-wider bg-[#1a1a1a] px-3 absolute left-1/2 -translate-x-1/2 rounded-full">Join Room</span>
-                <hr class="flex-grow border-zinc-700/50">
+            <button onclick="goToMatch()" class="btn-primary" style="width:100%;">Enter Game →</button>
+        </div>
+    </div>
+
+    <div style="min-height:100vh; display:flex; flex-direction:column; position:relative; z-index:1;">
+
+        <!-- Lobby nav -->
+        <nav style="padding:16px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle);">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img src="/images/chess_king_icon.png" alt="Chess Master Logo" style="width:38px; height:38px; object-fit:contain; border-radius:8px;">
+                <span style="font-family:'Playfair Display', serif; font-size:1.3rem; font-weight:700; color:#fff;">Chess <span class="gold-text">Master</span></span>
             </div>
-            
-            <div class="flex flex-col gap-3">
-                <input type="text" id="join-match-id" placeholder="Paste Match ID here..." class="w-full px-4 py-4 rounded-xl bg-zinc-800/50 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:bg-zinc-800 transition-all text-center font-mono text-lg">
-                <button onclick="joinGame()" class="w-full px-6 py-4 bg-zinc-700 hover:bg-zinc-600 rounded-xl font-bold transition-colors text-white text-lg">Join Game</button>
+            <a href="/match-history" style="padding:8px 16px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); font-size:0.8rem; color:#a1a1aa; text-decoration:none; font-weight:500;">📜 Match History</a>
+        </nav>
+
+        <main style="flex:1; display:flex; flex-direction:column; align-items:center; padding:40px 20px 60px;">
+
+            <!-- Hero section with image banner -->
+            <div style="width:100%; max-width:960px; margin-bottom:40px;">
+                <div class="hero-image-container">
+                    <img src="/images/chess_hero_banner.png" alt="Chess pieces in dramatic lighting">
+                    <div class="hero-image-label">
+                        <div style="display:inline-flex; align-items:center; gap:8px; padding:5px 12px; border-radius:20px; background:rgba(0,0,0,0.6); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.1); margin-bottom:6px;">
+                            <div class="dot-live"></div>
+                            <span style="font-size:0.68rem; font-weight:600; color:#e2e8f0; letter-spacing:0.06em; text-transform:uppercase;">Live Multiplayer</span>
+                        </div>
+                        <h1 style="font-family:'Playfair Display', serif; font-size:2.2rem; font-weight:900; color:#fff; line-height:1.2; text-shadow:0 2px 20px rgba(0,0,0,0.8);">
+                            Play Chess<br><span class="grad-text">in Real Time</span>
+                        </h1>
+                    </div>
+                </div>
             </div>
 
-            <div class="mt-8">
-                <a href="/match-history" class="text-sm border border-zinc-700/50 rounded-full px-6 py-2 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all inline-block">&larr; View Match History</a>
+            <!-- Content grid: action card + features -->
+            <div style="width:100%; max-width:960px; display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
+
+                <!-- ── Action card ── -->
+                <div class="glass glass-gold" style="padding:32px 28px;">
+                    <h2 style="font-size:1.35rem; font-weight:800; margin-bottom:6px;">Start Playing</h2>
+                    <p style="font-size:0.85rem; color:#71717a; margin-bottom:24px;">Create a private room or jump into a match instantly.</p>
+
+                    <!-- Buttons -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
+                        <button onclick="createGame()" class="btn-primary" style="display:flex; flex-direction:column; align-items:center; gap:4px; padding:18px 12px; border-radius:16px;">
+                            <span style="font-size:1.6rem;">🔒</span>
+                            <span style="font-size:0.95rem;">Private Room</span>
+                            <span style="font-size:0.65rem; opacity:0.7; font-weight:400;">Share ID with friend</span>
+                        </button>
+                        <button id="quick-match-btn" onclick="quickMatch()" class="btn-green" style="display:flex; flex-direction:column; align-items:center; gap:4px; padding:18px 12px; border-radius:16px;">
+                            <span style="font-size:1.6rem;">⚡</span>
+                            <span style="font-size:0.95rem;">Quick Match</span>
+                            <span style="font-size:0.65rem; opacity:0.7; font-weight:400;">Random opponent</span>
+                        </button>
+                    </div>
+
+                    <!-- Divider -->
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+                        <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+                        <span style="font-size:0.7rem; color:#52525b; font-weight:600; text-transform:uppercase; letter-spacing:0.1em;">or join room</span>
+                        <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+                    </div>
+
+                    <!-- Join room -->
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <input type="text" id="join-match-id" placeholder="Paste Match ID here…"
+                            style="width:100%; padding:14px 16px; border-radius:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); color:#fff; font-family:monospace; font-size:1rem; text-align:center; outline:none; transition:all 0.2s;"
+                            onfocus="this.style.borderColor='rgba(99,102,241,0.5)'; this.style.background='rgba(99,102,241,0.06)';"
+                            onblur="this.style.borderColor='var(--border-subtle)'; this.style.background='rgba(255,255,255,0.05)';"
+                            placeholder="Paste Match ID…">
+                        <button onclick="joinGame()" class="btn-ghost" style="width:100%; padding:13px; border-radius:12px;">Join Game →</button>
+                    </div>
+                </div>
+
+                <!-- ── Features card ── -->
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <!-- Mini board art -->
+                    <div style="border-radius:14px; overflow:hidden; border:1px solid var(--border-subtle);">
+                        <img src="/images/chess_board_topdown.png" alt="Chess board overview" style="width:100%; height:130px; object-fit:cover; display:block; opacity:0.8;">
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background:rgba(99,102,241,0.12);">⚡</div>
+                        <div>
+                            <div style="font-size:0.87rem; font-weight:700; margin-bottom:2px;">Real-time Sync</div>
+                            <div style="font-size:0.75rem; color:#71717a; line-height:1.5;">Moves sync instantly via WebSockets — zero lag gameplay.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background:rgba(245,200,66,0.10);">⏱️</div>
+                        <div>
+                            <div style="font-size:0.87rem; font-weight:700; margin-bottom:2px;">5-Minute Timers</div>
+                            <div style="font-size:0.75rem; color:#71717a; line-height:1.5;">Both players share synchronized server-controlled clocks.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background:rgba(16,185,129,0.10);">👁</div>
+                        <div>
+                            <div style="font-size:0.87rem; font-weight:700; margin-bottom:2px;">Spectator Mode</div>
+                            <div style="font-size:0.75rem; color:#71717a; line-height:1.5;">Join as a spectator and watch live games unfold.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon" style="background:rgba(236,72,153,0.10);">📊</div>
+                        <div>
+                            <div style="font-size:0.87rem; font-weight:700; margin-bottom:2px;">Match History</div>
+                            <div style="font-size:0.75rem; color:#71717a; line-height:1.5;">Every game is saved to MongoDB for future review.</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
+        </main>
+
+        <footer style="padding:20px; text-align:center; border-top:1px solid var(--border-subtle); color:#3f3f46; font-size:0.75rem;">
+            Developed with ❤️ by <strong style="color:#71717a;">Sarthak Mishra</strong> · Chess Master
+        </footer>
     </div>
-    <!-- Share ID Modal -->
-    <div id="share-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-[110] flex items-center justify-center">
-        <div class="modal-content">
-            <h2 class="text-xl font-bold mb-2 text-white">Room Created!</h2>
-            <p class="text-zinc-400 text-sm mb-4">Share this ID with your friend or spectators:</p>
-            <div class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 mb-4">
-                <span id="share-id" class="text-xl font-mono text-blue-400"></span>
-                <button onclick="copyShareId()" id="share-copy-btn" class="px-3 py-1 rounded bg-zinc-700 hover:bg-zinc-600 text-sm text-zinc-300 transition-colors">Copy</button>
-            </div>
-            <button onclick="goToMatch()" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl font-bold hover:scale-105 transition-all text-white">Enter Game &rarr;</button>
-        </div>
-    </div>
+
     <script>
         const socket = io();
         let pendingMatchId = null;
-        
+
         function quickMatch() {
             const btn = document.getElementById('quick-match-btn');
-            btn.innerText = "Searching...";
+            btn.innerHTML = '<span style="font-size:1.6rem">⏳</span><span>Searching…</span><span style="font-size:0.65rem;opacity:0.7;">Finding opponent</span>';
             btn.disabled = true;
-            btn.classList.add("animate-pulse");
+            btn.style.opacity = '0.7';
             socket.emit("quickMatch");
         }
-        
         socket.on("matchFound", function(matchId) {
             window.location.href = '/?matchId=' + matchId;
         });
-
         function createGame() {
-            pendingMatchId = Math.random().toString(36).substring(2, 8);
+            pendingMatchId = Math.random().toString(36).substring(2, 8).toUpperCase();
             document.getElementById('share-id').innerText = pendingMatchId;
-            document.getElementById('share-modal').classList.remove('hidden');
+            document.getElementById('share-modal').classList.add('show');
         }
         function goToMatch() {
-            if (pendingMatchId) window.location.href = '/?matchId=' + pendingMatchId;
+            if (pendingMatchId) window.location.href = '/?matchId=' + pendingMatchId.toLowerCase();
         }
         function copyShareId() {
             navigator.clipboard.writeText(pendingMatchId).then(() => {
@@ -301,13 +608,18 @@
         function joinGame() {
             const id = document.getElementById('join-match-id').value.trim();
             if (id) {
-                window.location.href = '/?matchId=' + id;
+                window.location.href = '/?matchId=' + id.toLowerCase();
             } else {
-                alert('Please enter a valid Match ID');
+                document.getElementById('join-match-id').style.borderColor = 'rgba(239,68,68,0.6)';
+                setTimeout(() => document.getElementById('join-match-id').style.borderColor = 'var(--border-subtle)', 1500);
             }
         }
         document.getElementById('join-match-id').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') joinGame();
+        });
+        // Click outside modal to close
+        document.getElementById('share-modal').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('show');
         });
     </script>
     <% } %>
