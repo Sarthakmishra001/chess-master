@@ -313,6 +313,20 @@
             box-shadow: 0 12px 28px rgba(0,0,0,0.4);
         }
         .promo-btn span { font-size: 0.65rem; font-weight: 700; color: #71717a; letter-spacing: 0.1em; text-transform: uppercase; }
+
+        /* ─── Responsive Adjustments ──────────────────────── */
+        @media (max-width: 768px) {
+            .hero-image-container img { height: 180px; }
+            .hero-image-label h1 { font-size: 1.8rem !important; }
+            .chessboard { box-shadow: 0 0 0 2px #2d2d2d, 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(99, 102, 241, 0.15); }
+        }
+        @media (max-width: 480px) {
+            .promo-btn { font-size: 1.8rem; padding: 12px; }
+            .game-nav { padding: 12px 16px !important; flex-wrap: wrap; gap: 10px; justify-content: center !important; }
+            .lobby-nav { padding: 14px 20px !important; flex-wrap: wrap; gap: 12px; justify-content: center !important; }
+            .player-card { flex: 1; min-width: 120px; justify-content: center; }
+            .hero-image-container img { height: 150px; }
+        }
     </style>
 </head>
 <body>
@@ -356,7 +370,7 @@
     <div style="min-height:100vh; display:flex; flex-direction:column; position:relative; z-index:1;">
 
         <!-- Top nav bar -->
-        <nav style="padding:14px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle); background:rgba(9,9,11,0.7); backdrop-filter:blur(16px); position:sticky; top:0; z-index:50;">
+        <nav class="game-nav" style="padding:14px 24px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle); background:rgba(9,9,11,0.7); backdrop-filter:blur(16px); position:sticky; top:0; z-index:50;">
             <div style="display:flex; align-items:center; gap:12px;">
                 <img src="/images/chess_king_icon.png" alt="Chess Master Logo" style="width:36px; height:36px; object-fit:contain; border-radius:8px;">
                 <a href="/" style="font-family:'Playfair Display', serif; font-size:1.25rem; font-weight:700; color:#fff; text-decoration:none;">
@@ -364,18 +378,18 @@
                 </a>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
-                <div style="display:flex; align-items:center; gap:8px; padding:6px 12px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle);">
+                <div style="display:flex; align-items:center; gap:6px; padding:6px 10px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle);">
                     <div class="dot-live"></div>
-                    <span style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.08em;">Room</span>
-                    <span id="room-id-text" style="font-family:monospace; font-size:0.8rem; color:#818cf8;"><%= locals.matchId %></span>
-                    <button onclick="copyRoomId()" id="copy-btn" style="font-size:0.65rem; padding:3px 8px; border-radius:6px; background:rgba(255,255,255,0.08); border:none; color:#d4d4d8; cursor:pointer; font-family:'Inter',sans-serif;">Copy</button>
+                    <span class="hidden sm:inline" style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.08em;">Room</span>
+                    <span id="room-id-text" style="font-family:monospace; font-size:0.75rem; color:#818cf8;"><%= locals.matchId %></span>
+                    <button onclick="copyRoomId()" id="copy-btn" class="hidden sm:inline-block" style="font-size:0.6rem; padding:3px 6px; border-radius:6px; background:rgba(255,255,255,0.08); border:none; color:#d4d4d8; cursor:pointer; font-family:'Inter',sans-serif;">Copy</button>
                 </div>
-                <a href="/match-history?matchId=<%= locals.matchId %>" style="padding:7px 14px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); font-size:0.78rem; color:#a1a1aa; text-decoration:none; font-weight:500; transition:all 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#a1a1aa'">📜 History</a>
+                <a href="/match-history?matchId=<%= locals.matchId %>" style="padding:7px 12px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); font-size:0.78rem; color:#a1a1aa; text-decoration:none; font-weight:500; transition:all 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#a1a1aa'">📜 <span class="hidden sm:inline">History</span></a>
             </div>
         </nav>
 
         <!-- Main game area -->
-        <main style="flex:1; display:flex; flex-direction:column; align-items:center; padding:20px 16px 32px; gap:16px;">
+        <main class="p-3 sm:p-5" style="flex:1; display:flex; flex-direction:column; align-items:center; gap:16px;">
 
             <!-- Player info + timers row -->
             <div style="width:100%; max-width:900px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
@@ -416,7 +430,7 @@
                 </div>
 
                 <!-- Right sidebar -->
-                <div style="display:flex; flex-direction:column; gap:12px; width:220px; flex-shrink:0; max-width:100%;">
+                <div style="display:flex; flex-direction:column; gap:12px; width:240px; flex-shrink:0; flex-grow:1; min-width:250px; max-width:100%;">
 
                     <!-- Board art image -->
                     <div style="border-radius:14px; overflow:hidden; border:1px solid var(--border-subtle); flex-shrink:0;">
@@ -487,15 +501,15 @@
     <div style="min-height:100vh; display:flex; flex-direction:column; position:relative; z-index:1;">
 
         <!-- Lobby nav -->
-        <nav style="padding:16px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle);">
+        <nav class="lobby-nav" style="padding:16px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle);">
             <div style="display:flex; align-items:center; gap:12px;">
                 <img src="/images/chess_king_icon.png" alt="Chess Master Logo" style="width:38px; height:38px; object-fit:contain; border-radius:8px;">
                 <span style="font-family:'Playfair Display', serif; font-size:1.3rem; font-weight:700; color:#fff;">Chess <span class="gold-text">Master</span></span>
             </div>
-            <a href="/match-history" style="padding:8px 16px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); font-size:0.8rem; color:#a1a1aa; text-decoration:none; font-weight:500;">📜 Match History</a>
+            <a href="/match-history" style="padding:8px 16px; border-radius:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-subtle); font-size:0.8rem; color:#a1a1aa; text-decoration:none; font-weight:500;">📜 <span class="hidden sm:inline">Match History</span></a>
         </nav>
 
-        <main style="flex:1; display:flex; flex-direction:column; align-items:center; padding:40px 20px 60px;">
+        <main class="px-4 py-8 sm:py-12" style="flex:1; display:flex; flex-direction:column; align-items:center;">
 
             <!-- Hero section with image banner -->
             <div style="width:100%; max-width:960px; margin-bottom:40px;">
@@ -514,7 +528,7 @@
             </div>
 
             <!-- Content grid: action card + features -->
-            <div style="width:100%; max-width:960px; display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
+            <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
 
                 <!-- ── Action card ── -->
                 <div class="glass glass-gold" style="padding:32px 28px;">
@@ -522,13 +536,13 @@
                     <p style="font-size:0.85rem; color:#71717a; margin-bottom:24px;">Create a private room or jump into a match instantly.</p>
 
                     <!-- Buttons -->
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
-                        <button onclick="createGame()" class="btn-primary" style="display:flex; flex-direction:column; align-items:center; gap:4px; padding:18px 12px; border-radius:16px;">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                        <button onclick="createGame()" class="btn-primary" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:16px 10px; border-radius:16px;">
                             <span style="font-size:1.6rem;">🔒</span>
                             <span style="font-size:0.95rem;">Private Room</span>
                             <span style="font-size:0.65rem; opacity:0.7; font-weight:400;">Share ID with friend</span>
                         </button>
-                        <button id="quick-match-btn" onclick="quickMatch()" class="btn-green" style="display:flex; flex-direction:column; align-items:center; gap:4px; padding:18px 12px; border-radius:16px;">
+                        <button id="quick-match-btn" onclick="quickMatch()" class="btn-green" style="display:flex; flex-direction:column; align-items:center; gap:3px; padding:16px 10px; border-radius:16px;">
                             <span style="font-size:1.6rem;">⚡</span>
                             <span style="font-size:0.95rem;">Quick Match</span>
                             <span style="font-size:0.65rem; opacity:0.7; font-weight:400;">Random opponent</span>
