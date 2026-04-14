@@ -246,3 +246,84 @@ window.resetGame = () => {
 };
 
 renderBoard();
+
+// ─── Mobile Touch Support ─────────────────────────────────────────
+// HTML5 drag/drop doesn't work on mobile. This adds touch-based dragging.
+(function () {
+  let touchPiece = null;
+  let touchSource = null;
+  let touchClone = null;
+
+  boardElement.addEventListener("touchstart", function (e) {
+    const touch = e.touches[0];
+    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!target) return;
+
+    const piece = target.closest(".piece");
+    if (!piece || !piece.draggable) return;
+
+    e.preventDefault();
+    const square = piece.closest(".square");
+    touchSource = {
+      row: parseInt(square.dataset.row),
+      col: parseInt(square.dataset.col),
+    };
+    touchPiece = piece;
+
+    // Create a visual clone that follows the finger
+    touchClone = piece.cloneNode(true);
+    touchClone.style.position = "fixed";
+    touchClone.style.pointerEvents = "none";
+    touchClone.style.zIndex = "1000";
+    touchClone.style.opacity = "0.85";
+    touchClone.style.fontSize = piece.style.fontSize || "clamp(18px, 4.5vw, 42px)";
+    touchClone.style.transform = playerRole === "b" ? "rotate(180deg)" : "none";
+    touchClone.style.left = touch.clientX - 24 + "px";
+    touchClone.style.top = touch.clientY - 24 + "px";
+    document.body.appendChild(touchClone);
+
+    piece.style.opacity = "0.3";
+  }, { passive: false });
+
+  boardElement.addEventListener("touchmove", function (e) {
+    if (!touchClone) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    touchClone.style.left = touch.clientX - 24 + "px";
+    touchClone.style.top = touch.clientY - 24 + "px";
+  }, { passive: false });
+
+  boardElement.addEventListener("touchend", function (e) {
+    if (!touchSource || !touchClone) {
+      cleanup();
+      return;
+    }
+
+    const touch = e.changedTouches[0];
+    // Temporarily hide clone to find element beneath
+    touchClone.style.display = "none";
+    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+    touchClone.style.display = "";
+
+    if (dropTarget) {
+      const square = dropTarget.closest(".square");
+      if (square) {
+        const targetSquare = {
+          row: parseInt(square.dataset.row),
+          col: parseInt(square.dataset.col),
+        };
+        handleMove(touchSource, targetSquare);
+      }
+    }
+
+    cleanup();
+  });
+
+  function cleanup() {
+    if (touchPiece) touchPiece.style.opacity = "1";
+    if (touchClone && touchClone.parentNode) touchClone.parentNode.removeChild(touchClone);
+    touchPiece = null;
+    touchSource = null;
+    touchClone = null;
+  }
+})();
