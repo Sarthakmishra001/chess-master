@@ -1,15 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Match History — Chess Master</title>
     <meta name="description" content="Review all past chess games, results, and move counts on Chess Master.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700;900&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
         :root {
             --gold: #f5c842;
@@ -27,17 +34,43 @@
         }
 
         /* Ambient blobs */
-        .blob { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.14; pointer-events: none; z-index: 0; }
-        .blob-1 { width: 500px; height: 500px; background: #6366f1; top: -150px; left: -150px; }
-        .blob-2 { width: 400px; height: 400px; background: #a855f7; bottom: -100px; right: -100px; }
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.14;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .blob-1 {
+            width: 500px;
+            height: 500px;
+            background: #6366f1;
+            top: -150px;
+            left: -150px;
+        }
+
+        .blob-2 {
+            width: 400px;
+            height: 400px;
+            background: #a855f7;
+            bottom: -100px;
+            right: -100px;
+        }
 
         .grad-text {
             background: linear-gradient(135deg, #a78bfa, #818cf8, #38bdf8);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
+
         .gold-text {
             background: linear-gradient(135deg, #f5c842, #f97316);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .glass {
@@ -49,85 +82,176 @@
         }
 
         /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.03); }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.22);
+        }
 
         /* Table rows */
         .match-row {
             transition: background 0.2s ease;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .match-row:last-child { border-bottom: none; }
-        .match-row:hover { background: rgba(255,255,255,0.03); }
+
+        .match-row:last-child {
+            border-bottom: none;
+        }
+
+        .match-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
 
         /* Result badges */
-        .badge-win-white  { background: rgba(99,102,241,0.12);  border: 1px solid rgba(99,102,241,0.3);  color: #818cf8; }
-        .badge-win-black  { background: rgba(168,85,247,0.12);  border: 1px solid rgba(168,85,247,0.3);  color: #c084fc; }
-        .badge-draw       { background: rgba(113,113,122,0.12); border: 1px solid rgba(113,113,122,0.3); color: #a1a1aa; }
-        .badge-time       { background: rgba(245,158,11,0.12);  border: 1px solid rgba(245,158,11,0.3);  color: #fbbf24; }
-        .badge-forfeit    { background: rgba(239,68,68,0.12);   border: 1px solid rgba(239,68,68,0.3);   color: #f87171; }
+        .badge-win-white {
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #818cf8;
+        }
+
+        .badge-win-black {
+            background: rgba(168, 85, 247, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #c084fc;
+        }
+
+        .badge-draw {
+            background: rgba(113, 113, 122, 0.12);
+            border: 1px solid rgba(113, 113, 122, 0.3);
+            color: #a1a1aa;
+        }
+
+        .badge-time {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+        }
+
+        .badge-forfeit {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
 
         .result-badge {
-            display: inline-flex; align-items: center; gap: 5px;
-            padding: 4px 10px; border-radius: 8px;
-            font-size: 0.68rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.07em;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
             white-space: nowrap;
         }
 
         /* Stats mini cards */
         .stat-card {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--border-subtle);
             border-radius: 14px;
             padding: 16px 20px;
-            display: flex; align-items: center; gap: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
+
         .stat-icon {
-            font-size: 1.6rem; width: 44px; height: 44px;
-            display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             border-radius: 10px;
         }
 
         /* Banner overlay */
         .banner-img-wrap {
-            position: relative; border-radius: 18px; overflow: hidden;
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
             border: 1px solid var(--border-subtle);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
         }
+
         .banner-img-wrap img {
-            width: 100%; height: 200px; object-fit: cover; display: block;
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
             filter: brightness(0.6);
         }
+
         .banner-img-wrap::after {
             content: '';
-            position: absolute; inset: 0;
-            background: linear-gradient(to right, rgba(9,9,11,0.8) 0%, rgba(9,9,11,0.3) 60%, rgba(9,9,11,0.0) 100%);
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, rgba(9, 9, 11, 0.8) 0%, rgba(9, 9, 11, 0.3) 60%, rgba(9, 9, 11, 0.0) 100%);
         }
+
         .banner-content {
-            position: absolute; inset: 0; z-index: 2;
-            display: flex; flex-direction: column; justify-content: center;
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             padding: 28px 32px;
         }
 
         .btn-ghost {
-            display: inline-flex; align-items: center; gap: 6px;
-            padding: 9px 18px; border-radius: 11px;
-            background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle);
-            color: #d4d4d8; font-weight: 600; font-size: 0.82rem;
-            text-decoration: none; transition: all 0.2s ease; white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 18px;
+            border-radius: 11px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-subtle);
+            color: #d4d4d8;
+            font-weight: 600;
+            font-size: 0.82rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
             font-family: 'Inter', sans-serif;
         }
-        .btn-ghost:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.18); color: #fff; }
+
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.18);
+            color: #fff;
+        }
 
         /* ─── Responsive: Tablet (768px) ─────────────────── */
         @media (max-width: 768px) {
-            .banner-img-wrap img { height: 170px; }
-            .banner-content h1 { font-size: 1.6rem !important; }
-            .banner-content { padding: 22px 24px !important; }
-            .main-container { padding: 24px 14px 40px !important; }
+            .banner-img-wrap img {
+                height: 170px;
+            }
+
+            .banner-content h1 {
+                font-size: 1.6rem !important;
+            }
+
+            .banner-content {
+                padding: 22px 24px !important;
+            }
+
+            .main-container {
+                padding: 24px 14px 40px !important;
+            }
         }
 
         /* ─── Responsive: Mobile (640px) ─────────────────── */
@@ -138,38 +262,68 @@
                 gap: 8px !important;
                 justify-content: center !important;
             }
-            .banner-img-wrap img { height: 150px; }
+
+            .banner-img-wrap img {
+                height: 150px;
+            }
+
             .banner-content {
                 padding: 16px !important;
             }
-            .banner-content h1 { font-size: 1.4rem !important; }
+
+            .banner-content h1 {
+                font-size: 1.4rem !important;
+            }
+
             .stat-card {
                 padding: 12px 14px !important;
             }
-            .main-container { padding: 18px 10px 36px !important; }
+
+            .main-container {
+                padding: 18px 10px 36px !important;
+            }
 
             /* Switch table to card layout on mobile */
-            .match-table-desktop { display: none !important; }
-            .match-cards-mobile { display: flex !important; }
+            .match-table-desktop {
+                display: none !important;
+            }
+
+            .match-cards-mobile {
+                display: flex !important;
+            }
         }
 
         /* ─── Responsive: Small phones (480px) ────────────── */
         @media (max-width: 480px) {
-            .banner-img-wrap img { height: 120px; }
-            .banner-content h1 { font-size: 1.2rem !important; }
-            .banner-content p { font-size: 0.75rem !important; }
+            .banner-img-wrap img {
+                height: 120px;
+            }
+
+            .banner-content h1 {
+                font-size: 1.2rem !important;
+            }
+
+            .banner-content p {
+                font-size: 0.75rem !important;
+            }
+
             .stat-card {
                 flex-direction: column !important;
                 text-align: center !important;
                 justify-content: center !important;
                 padding: 10px !important;
             }
+
             .stat-icon {
                 width: 36px !important;
                 height: 36px !important;
                 font-size: 1.3rem !important;
             }
-            footer { font-size: 0.68rem !important; padding: 14px !important; }
+
+            footer {
+                font-size: 0.68rem !important;
+                padding: 14px !important;
+            }
         }
 
         /* ─── Mobile match cards ────────────────────────── */
@@ -178,8 +332,9 @@
             flex-direction: column;
             gap: 10px;
         }
+
         .match-card {
-            background: rgba(255,255,255,0.03);
+            background: rgba(255, 255, 255, 0.03);
             border: 1px solid var(--border-subtle);
             border-radius: 14px;
             padding: 14px 16px;
@@ -188,13 +343,18 @@
             gap: 10px;
             transition: background 0.2s ease;
         }
-        .match-card:hover { background: rgba(255,255,255,0.05); }
+
+        .match-card:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
         .match-card-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 8px;
         }
+
         .match-card-body {
             display: flex;
             align-items: center;
@@ -202,6 +362,7 @@
             gap: 10px;
             flex-wrap: wrap;
         }
+
         .match-card-meta {
             display: flex;
             align-items: center;
@@ -211,6 +372,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- Ambient blobs -->
     <div class="blob blob-1"></div>
@@ -219,203 +381,294 @@
     <div style="min-height:100vh; display:flex; flex-direction:column; position:relative; z-index:1;">
 
         <!-- Navbar -->
-        <nav class="nav-container" style="padding:14px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle); background:rgba(9,9,11,0.7); backdrop-filter:blur(16px); position:sticky; top:0; z-index:50;">
+        <nav class="nav-container"
+            style="padding:14px 32px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-subtle); background:rgba(9,9,11,0.7); backdrop-filter:blur(16px); position:sticky; top:0; z-index:50;">
             <div style="display:flex; align-items:center; gap:12px;">
-                <img src="/images/chess_king_icon.png" alt="Chess Master" style="width:34px; height:34px; object-fit:contain; border-radius:8px;">
-                <a href="/" style="font-family:'Playfair Display', serif; font-size:1.2rem; font-weight:700; color:#fff; text-decoration:none;">
+                <img src="/images/chess_king_icon.png" alt="Chess Master"
+                    style="width:34px; height:34px; object-fit:contain; border-radius:8px;">
+                <a href="/"
+                    style="font-family:'Playfair Display', serif; font-size:1.2rem; font-weight:700; color:#fff; text-decoration:none;">
                     Chess <span class="gold-text">Master</span>
                 </a>
             </div>
             <div style="display:flex; align-items:center; gap:10px;">
                 <% if (locals.filterMatchId) { %>
                     <a href="/match-history" class="btn-ghost">All Matches</a>
-                <% } %>
-                <a href="/" class="btn-ghost">← Back to Game</a>
+                    <% } %>
+                        <a href="/" class="btn-ghost">← Back to Game</a>
             </div>
         </nav>
 
-        <main class="main-container" style="flex:1; max-width:1000px; width:100%; margin:0 auto; padding:32px 20px 60px;">
+        <main class="main-container"
+            style="flex:1; max-width:1000px; width:100%; margin:0 auto; padding:32px 20px 60px;">
 
             <!-- Hero Banner -->
             <div class="banner-img-wrap" style="margin-bottom:32px;">
                 <img src="/images/chess_hero_banner.png" alt="Chess pieces">
                 <div class="banner-content">
-                    <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#a1a1aa; margin-bottom:6px;">📜 Archive</div>
-                    <h1 style="font-family:'Playfair Display', serif; font-size:2rem; font-weight:900; margin-bottom:6px; line-height:1.2;">
+                    <div
+                        style="font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.12em; color:#a1a1aa; margin-bottom:6px;">
+                        📜 Archive</div>
+                    <h1
+                        style="font-family:'Playfair Display', serif; font-size:2rem; font-weight:900; margin-bottom:6px; line-height:1.2;">
                         Match History
                     </h1>
                     <% if (locals.filterMatchId) { %>
                         <p style="font-size:0.85rem; color:#a1a1aa;">
-                            Showing results for room: <span style="font-family:monospace; color:#818cf8; font-weight:700;"><%= filterMatchId %></span>
+                            Showing results for room: <span
+                                style="font-family:monospace; color:#818cf8; font-weight:700;">
+                                <%= filterMatchId %>
+                            </span>
                         </p>
-                    <% } else { %>
-                        <p style="font-size:0.85rem; color:#a1a1aa;">All recorded games — most recent first.</p>
-                    <% } %>
+                        <% } else { %>
+                            <p style="font-size:0.85rem; color:#a1a1aa;">All recorded games — most recent first.</p>
+                            <% } %>
                 </div>
             </div>
 
             <!-- Stats row -->
-            <% if (matches && matches.length > 0) { %>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-7">
-                <div class="stat-card">
-                    <div class="stat-icon" style="background:rgba(99,102,241,0.12); font-size:1.4rem;">🎮</div>
-                    <div>
-                        <div style="font-size:1.4rem; font-weight:800; line-height:1;"><%= matches.length %></div>
-                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">Total Games</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background:rgba(245,200,66,0.10);">♟️</div>
-                    <div>
-                        <div style="font-size:1.4rem; font-weight:800; line-height:1;">
-                            <%= Math.round(matches.reduce((sum, m) => sum + m.moves.length, 0) / matches.length) %>
+            <% if (matches && matches.length> 0) { %>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-7">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(99,102,241,0.12); font-size:1.4rem;">🎮</div>
+                        <div>
+                            <div style="font-size:1.4rem; font-weight:800; line-height:1;">
+                                <%= matches.length %>
+                            </div>
+                            <div
+                                style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">
+                                Total Games</div>
                         </div>
-                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">Avg Moves</div>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background:rgba(168,85,247,0.10);">🏆</div>
-                    <div>
-                        <div style="font-size:1.4rem; font-weight:800; line-height:1;">
-                            <%= matches.filter(m => m.result.toLowerCase().includes('checkmate')).length %>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(245,200,66,0.10);">♟️</div>
+                        <div>
+                            <div style="font-size:1.4rem; font-weight:800; line-height:1;">
+                                <%= Math.round(matches.reduce((sum, m)=> sum + m.moves.length, 0) / matches.length) %>
+                            </div>
+                            <div
+                                style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">
+                                Avg Moves</div>
                         </div>
-                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">Checkmates</div>
                     </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background:rgba(16,185,129,0.10);">🤝</div>
-                    <div>
-                        <div style="font-size:1.4rem; font-weight:800; line-height:1;">
-                            <%= matches.filter(m => {const r = m.result.toLowerCase(); return r.includes('draw') || r.includes('stalemate') || r.includes('repetition') || r.includes('insufficient');}).length %>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(168,85,247,0.10);">🏆</div>
+                        <div>
+                            <div style="font-size:1.4rem; font-weight:800; line-height:1;">
+                                <%= matches.filter(m=> m.result.toLowerCase().includes('checkmate')).length %>
+                            </div>
+                            <div
+                                style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">
+                                Checkmates</div>
                         </div>
-                        <div style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">Draws</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(16,185,129,0.10);">🤝</div>
+                        <div>
+                            <div style="font-size:1.4rem; font-weight:800; line-height:1;">
+                                <%= matches.filter(m=> {const r = m.result.toLowerCase(); return r.includes('draw') ||
+                                    r.includes('stalemate') || r.includes('repetition') ||
+                                    r.includes('insufficient');}).length %>
+                            </div>
+                            <div
+                                style="font-size:0.7rem; color:#71717a; text-transform:uppercase; letter-spacing:0.07em; margin-top:2px;">
+                                Draws</div>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Matches table card (Desktop) -->
-            <div class="glass match-table-desktop" style="padding:0; overflow:hidden;">
-                <!-- Table header -->
-                <div style="padding:18px 24px; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;">
-                    <h2 style="font-size:0.9rem; font-weight:700; color:#e4e4e7;">All Matches</h2>
-                    <span style="font-size:0.75rem; color:#52525b;"><%= matches.length %> game<%= matches.length !== 1 ? 's' : '' %> recorded</span>
-                </div>
-
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; min-width:600px;">
-                        <thead>
-                            <tr style="background:rgba(255,255,255,0.02);">
-                                <th style="padding:12px 24px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">#</th>
-                                <th style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Match ID</th>
-                                <th style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Players</th>
-                                <th style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Result</th>
-                                <th style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Moves</th>
-                                <th style="padding:12px 24px 12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% matches.forEach((match, idx) => {
-                                const r = match.result.toLowerCase();
-                                let badgeClass = 'badge-draw';
-                                let resultIcon = '🤝';
-                                if (r.includes('white wins') || r.includes('white')) { badgeClass = 'badge-win-white'; resultIcon = '♔'; }
-                                else if (r.includes('black wins') || r.includes('black')) { badgeClass = 'badge-win-black'; resultIcon = '♚'; }
-                                if (r.includes('time out')) { badgeClass = 'badge-time'; resultIcon = '⏱️'; }
-                                if (r.includes('forfeit')) { badgeClass = 'badge-forfeit'; resultIcon = '🏳️'; }
-                            %>
-                            <tr class="match-row">
-                                <td style="padding:16px 24px; font-size:0.75rem; color:#52525b; font-weight:600;"><%= idx + 1 %></td>
-                                <td style="padding:16px;">
-                                    <a href="/match-history?matchId=<%= match.matchId %>" style="font-family:monospace; font-size:0.8rem; color:#818cf8; text-decoration:none; font-weight:700; background:rgba(99,102,241,0.08); padding:3px 8px; border-radius:6px; border:1px solid rgba(99,102,241,0.2); transition:all 0.2s;"
-                                       onmouseover="this.style.background='rgba(99,102,241,0.15)'"
-                                       onmouseout="this.style.background='rgba(99,102,241,0.08)'">
-                                        <%= match.matchId %>
-                                    </a>
-                                </td>
-                                <td style="padding:16px;">
-                                    <div style="display:flex; flex-direction:column; gap:4px;">
-                                        <div style="display:flex; align-items:center; gap:6px;">
-                                            <span style="font-size:0.9rem;">♔</span>
-                                            <span style="font-size:0.8rem; color:#e4e4e7; font-weight:500;">White</span>
-                                        </div>
-                                        <div style="display:flex; align-items:center; gap:6px;">
-                                            <span style="font-size:0.9rem;">♚</span>
-                                            <span style="font-size:0.8rem; color:#a1a1aa; font-weight:500;">Black</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td style="padding:16px;">
-                                    <span class="result-badge <%= badgeClass %>" style="white-space:normal; display:inline-block; text-align:center; line-height:1.3; min-width:110px;">
-                                        <%= resultIcon %> <%= match.result.replace(/\n/g, ' ') %>
-                                    </span>
-                                </td>
-                                <td style="padding:16px;">
-                                    <div style="display:flex; align-items:center; gap:6px;">
-                                        <div style="width:32px; height:4px; border-radius:2px; background:linear-gradient(90deg, #6366f1, #a855f7); opacity:<%= Math.min(match.moves.length / 80, 1) %>;"></div>
-                                        <span style="font-size:0.82rem; color:#a1a1aa; font-weight:500;"><%= match.moves.length %></span>
-                                    </div>
-                                </td>
-                                <td style="padding:16px 24px 16px 16px; font-size:0.8rem; color:#71717a;">
-                                    <%= new Date(match.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
-                                </td>
-                            </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Matches cards (Mobile) -->
-            <div class="match-cards-mobile">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
-                    <h2 style="font-size:0.88rem; font-weight:700; color:#e4e4e7;">All Matches</h2>
-                    <span style="font-size:0.72rem; color:#52525b;"><%= matches.length %> game<%= matches.length !== 1 ? 's' : '' %></span>
-                </div>
-                <% matches.forEach((match, idx) => {
-                    const r2 = match.result.toLowerCase();
-                    let badgeClass2 = 'badge-draw';
-                    let resultIcon2 = '🤝';
-                    if (r2.includes('white wins') || r2.includes('white')) { badgeClass2 = 'badge-win-white'; resultIcon2 = '♔'; }
-                    else if (r2.includes('black wins') || r2.includes('black')) { badgeClass2 = 'badge-win-black'; resultIcon2 = '♚'; }
-                    if (r2.includes('time out')) { badgeClass2 = 'badge-time'; resultIcon2 = '⏱️'; }
-                    if (r2.includes('forfeit')) { badgeClass2 = 'badge-forfeit'; resultIcon2 = '🏳️'; }
-                %>
-                <div class="match-card">
-                    <div class="match-card-header">
-                        <a href="/match-history?matchId=<%= match.matchId %>" style="font-family:monospace; font-size:0.78rem; color:#818cf8; text-decoration:none; font-weight:700; background:rgba(99,102,241,0.08); padding:3px 8px; border-radius:6px; border:1px solid rgba(99,102,241,0.2);">
-                            #<%= idx + 1 %> — <%= match.matchId %>
-                        </a>
-                        <span style="font-size:0.68rem; color:#52525b;"><%= new Date(match.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
-                    </div>
-                    <div class="match-card-body">
-                        <span class="result-badge <%= badgeClass2 %>" style="line-height:1.3;">
-                            <%= resultIcon2 %> <%= match.result.replace(/\n/g, ' ') %>
+                <!-- Matches table card (Desktop) -->
+                <div class="glass match-table-desktop" style="padding:0; overflow:hidden;">
+                    <!-- Table header -->
+                    <div
+                        style="padding:18px 24px; border-bottom:1px solid var(--border-subtle); display:flex; align-items:center; justify-content:space-between;">
+                        <h2 style="font-size:0.9rem; font-weight:700; color:#e4e4e7;">All Matches</h2>
+                        <span style="font-size:0.75rem; color:#52525b;">
+                            <%= matches.length %> game<%= matches.length !==1 ? 's' : '' %> recorded
                         </span>
-                        <div class="match-card-meta">
-                            <span>♔ vs ♚</span>
-                            <span>•</span>
-                            <span><%= match.moves.length %> moves</span>
-                        </div>
+                    </div>
+
+                    <div style="overflow-x:auto;">
+                        <table style="width:100%; border-collapse:collapse; min-width:600px;">
+                            <thead>
+                                <tr style="background:rgba(255,255,255,0.02);">
+                                    <th
+                                        style="padding:12px 24px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">
+                                        #</th>
+                                    <th
+                                        style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">
+                                        Match ID</th>
+                                    <th
+                                        style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">
+                                        Players</th>
+                                    <th
+                                        style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">
+                                        Result</th>
+                                    <th
+                                        style="padding:12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">
+                                        Moves</th>
+                                    <th
+                                        style="padding:12px 24px 12px 16px; text-align:left; font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#52525b;">
+                                        Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% matches.forEach((match, idx)=> {
+                                    const r = match.result.toLowerCase();
+                                    let badgeClass = 'badge-draw';
+                                    let resultIcon = '🤝';
+                                    if (r.includes('white wins') || r.includes('white')) { badgeClass =
+                                    'badge-win-white'; resultIcon = '♔'; }
+                                    else if (r.includes('black wins') || r.includes('black')) { badgeClass =
+                                    'badge-win-black'; resultIcon = '♚'; }
+                                    if (r.includes('time out')) { badgeClass = 'badge-time'; resultIcon = '⏱️'; }
+                                    if (r.includes('forfeit')) { badgeClass = 'badge-forfeit'; resultIcon = '🏳️'; }
+                                    %>
+                                    <tr class="match-row">
+                                        <td
+                                            style="padding:16px 24px; font-size:0.75rem; color:#52525b; font-weight:600;">
+                                            <%= idx + 1 %>
+                                        </td>
+                                        <td style="padding:16px;">
+                                            <a href="/match-history?matchId=<%= match.matchId %>"
+                                                style="font-family:monospace; font-size:0.8rem; color:#818cf8; text-decoration:none; font-weight:700; background:rgba(99,102,241,0.08); padding:3px 8px; border-radius:6px; border:1px solid rgba(99,102,241,0.2); transition:all 0.2s;"
+                                                onmouseover="this.style.background='rgba(99,102,241,0.15)'"
+                                                onmouseout="this.style.background='rgba(99,102,241,0.08)'">
+                                                <%= match.matchId %>
+                                            </a>
+                                        </td>
+                                        <td style="padding:16px;">
+                                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                                <div style="display:flex; align-items:center; gap:6px;">
+                                                    <span style="font-size:0.9rem;">♔</span>
+                                                    <span
+                                                        style="font-size:0.8rem; color:#e4e4e7; font-weight:500;">White</span>
+                                                </div>
+                                                <div style="display:flex; align-items:center; gap:6px;">
+                                                    <span style="font-size:0.9rem;">♚</span>
+                                                    <span
+                                                        style="font-size:0.8rem; color:#a1a1aa; font-weight:500;">Black</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td style="padding:16px;">
+                                            <span class="result-badge <%= badgeClass %>"
+                                                style="white-space:normal; display:inline-block; text-align:center; line-height:1.3; min-width:110px;">
+                                                <%= resultIcon %>
+                                                    <%= match.result.replace(/\n/g, ' ' ) %>
+                                            </span>
+                                        </td>
+                                        <td style="padding:16px;">
+                                            <div style="display:flex; align-items:center; gap:6px;">
+                                                <div style="width:40px; height:5px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;"
+                                                    title="<%= match.moves.length %> moves">
+                                                    <div
+                                                        class="progress-bar-fill"
+                                                        data-width="<%= Math.min(((match.moves ? match.moves.length : 0) * 1.25), 100).toFixed(0) %>"
+                                                        style="width:0%; height:100%; background:linear-gradient(90deg, #6366f1, #a855f7); border-radius:4px;">
+                                                    </div>
+                                                </div>
+                                                <span style="font-size:0.82rem; color:#a1a1aa; font-weight:500;">
+                                                    <%= match.moves.length %>
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td style="padding:16px 24px 16px 16px; font-size:0.8rem; color:#71717a;">
+                                            <%= new Date(match.createdAt).toLocaleDateString('en-US', { month: 'short' ,
+                                                day: 'numeric' , year: 'numeric' }) %>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <% }) %>
-            </div>
 
-            <% } else { %>
-            <!-- Empty state -->
-            <div class="glass" style="padding:64px 32px; text-align:center;">
-                <img src="/images/chess_board_topdown.png" alt="Chess board" style="width:200px; height:120px; object-fit:cover; border-radius:14px; margin:0 auto 24px; opacity:0.5; display:block; border:1px solid var(--border-subtle);">
-                <div style="font-size:2.5rem; margin-bottom:12px;">♟️</div>
-                <h2 style="font-size:1.3rem; font-weight:800; margin-bottom:8px; color:#e4e4e7;">No matches yet</h2>
-                <p style="color:#71717a; font-size:0.88rem; margin-bottom:24px;">Games will appear here once you finish a match.</p>
-                <a href="/" style="display:inline-block; padding:12px 28px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border-radius:12px; text-decoration:none; font-weight:700; font-size:0.9rem; box-shadow:0 8px 24px rgba(99,102,241,0.3);">Start Playing →</a>
-            </div>
-            <% } %>
+                <!-- Matches cards (Mobile) -->
+                <div class="match-cards-mobile">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                        <h2 style="font-size:0.88rem; font-weight:700; color:#e4e4e7;">All Matches</h2>
+                        <span style="font-size:0.72rem; color:#52525b;">
+                            <%= matches.length %> game<%= matches.length !==1 ? 's' : '' %>
+                        </span>
+                    </div>
+                    <% matches.forEach((match, idx)=> {
+                        const r2 = match.result.toLowerCase();
+                        let badgeClass2 = 'badge-draw';
+                        let resultIcon2 = '🤝';
+                        if (r2.includes('white wins') || r2.includes('white')) { badgeClass2 = 'badge-win-white';
+                        resultIcon2 = '♔'; }
+                        else if (r2.includes('black wins') || r2.includes('black')) { badgeClass2 = 'badge-win-black';
+                        resultIcon2 = '♚'; }
+                        if (r2.includes('time out')) { badgeClass2 = 'badge-time'; resultIcon2 = '⏱️'; }
+                        if (r2.includes('forfeit')) { badgeClass2 = 'badge-forfeit'; resultIcon2 = '🏳️'; }
+                        %>
+                        <div class="match-card">
+                            <div class="match-card-header">
+                                <a href="/match-history?matchId=<%= match.matchId %>"
+                                    style="font-family:monospace; font-size:0.78rem; color:#818cf8; text-decoration:none; font-weight:700; background:rgba(99,102,241,0.08); padding:3px 8px; border-radius:6px; border:1px solid rgba(99,102,241,0.2);">
+                                    #<%= idx + 1 %> — <%= match.matchId %>
+                                </a>
+                                <span style="font-size:0.68rem; color:#52525b;">
+                                    <%= new Date(match.createdAt).toLocaleDateString('en-US', { month: 'short' ,
+                                        day: 'numeric' }) %>
+                                </span>
+                            </div>
+                            <div class="match-card-body">
+                                <span class="result-badge <%= badgeClass2 %>" style="line-height:1.3;">
+                                    <%= resultIcon2 %>
+                                        <%= match.result.replace(/\n/g, ' ' ) %>
+                                </span>
+                                <div class="match-card-meta">
+                                    <span>♔ vs ♚</span>
+                                    <span>•</span>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <div
+                                            style="width:30px; height:4px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;">
+                                            <div
+                                                class="progress-bar-fill"
+                                                data-width="<%= Math.min(((match.moves ? match.moves.length : 0) * 1.25), 100).toFixed(0) %>"
+                                                style="width:0%; height:100%; background:linear-gradient(90deg, #6366f1, #a855f7); border-radius:4px;">
+                                            </div>
+                                        </div>
+                                        <span>
+                                            <%= match.moves.length %> moves
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <% }) %>
+                </div>
+
+                <% } else { %>
+                    <!-- Empty state -->
+                    <div class="glass" style="padding:64px 32px; text-align:center;">
+                        <img src="/images/chess_board_topdown.png" alt="Chess board"
+                            style="width:200px; height:120px; object-fit:cover; border-radius:14px; margin:0 auto 24px; opacity:0.5; display:block; border:1px solid var(--border-subtle);">
+                        <div style="font-size:2.5rem; margin-bottom:12px;">♟️</div>
+                        <h2 style="font-size:1.3rem; font-weight:800; margin-bottom:8px; color:#e4e4e7;">No matches yet
+                        </h2>
+                        <p style="color:#71717a; font-size:0.88rem; margin-bottom:24px;">Games will appear here once you
+                            finish a match.</p>
+                        <a href="/"
+                            style="display:inline-block; padding:12px 28px; background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; border-radius:12px; text-decoration:none; font-weight:700; font-size:0.9rem; box-shadow:0 8px 24px rgba(99,102,241,0.3);">Start
+                            Playing →</a>
+                    </div>
+                    <% } %>
         </main>
 
-        <footer style="padding:20px; text-align:center; border-top:1px solid var(--border-subtle); color:#3f3f46; font-size:0.75rem;">
+        <footer
+            style="padding:20px; text-align:center; border-top:1px solid var(--border-subtle); color:#3f3f46; font-size:0.75rem;">
             Developed with ❤️ by <strong style="color:#71717a;">Sarthak Mishra</strong> · Chess Master
         </footer>
     </div>
+    <script>
+        /* Apply progress-bar widths from data-width (avoids EJS inside style attrs) */
+        document.querySelectorAll('.progress-bar-fill').forEach(function(el) {
+            el.style.width = (el.dataset.width || '0') + '%';
+        });
+    </script>
 </body>
+
 </html>

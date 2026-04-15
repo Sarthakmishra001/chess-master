@@ -11,6 +11,10 @@ let sourceSquare = null;
 let playerRole = null;
 let moveHistoryData = [];
 
+// Selection and Tap-to-move State Variables
+let selectedSquare = null;   // { row, col }
+let validMoveSquares = [];   // array of { row, col }
+
 // Join the specific match room
 socket.emit("joinMatch", matchId);
 
@@ -79,6 +83,7 @@ const renderBoard = () => {
     boardElement.classList.remove("flipped");
   }
 
+  applySelectionHighlights();
   renderMoveHistory();
 };
 
@@ -120,6 +125,37 @@ const renderMoveHistory = () => {
   // Scroll to bottom
   const scrollContainer = document.getElementById("move-history");
   if (scrollContainer) scrollContainer.scrollTop = scrollContainer.scrollHeight;
+};
+
+// ─── Selection Highlight Helpers ─────────────────────────────────────
+const clearSelection = () => {
+    selectedSquare = null;
+    validMoveSquares = [];
+    renderBoard(); // re-render handles clearing CSS classes
+};
+
+const applySelectionHighlights = () => {
+    if (!selectedSquare) return;
+
+    // Highlight the selected square
+    const selSquareEl = document.querySelector(`.square[data-row="${selectedSquare.row}"][data-col="${selectedSquare.col}"]`);
+    if (selSquareEl) {
+        selSquareEl.classList.add("selected-square");
+    }
+
+    // Highlight valid moves
+    validMoveSquares.forEach(sq => {
+        const targetSquareEl = document.querySelector(`.square[data-row="${sq.row}"][data-col="${sq.col}"]`);
+        if (targetSquareEl) {
+            // Check if there is an opponent piece to capture (for ring indicator)
+            const targetPiece = chess.board()[sq.row][sq.col];
+            if (targetPiece) {
+                targetSquareEl.classList.add("valid-move-capture");
+            } else {
+                targetSquareEl.classList.add("valid-move-dot");
+            }
+        }
+    });
 };
 
 let pendingMove = null;
@@ -247,83 +283,164 @@ window.resetGame = () => {
 
 renderBoard();
 
-// ─── Mobile Touch Support ─────────────────────────────────────────
-// HTML5 drag/drop doesn't work on mobile. This adds touch-based dragging.
+// ─── Hybrid Interaction (Pointer Events) ─────────────────────────
+// Handles Tap-to-move (+ Touch-drag) for touch devices, leaves HTML5 drag for desktop.
 (function () {
-  let touchPiece = null;
-  let touchSource = null;
   let touchClone = null;
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  const DRAG_THRESHOLD = 6;
+  let longPressTimer = null;
 
-  boardElement.addEventListener("touchstart", function (e) {
-    const touch = e.touches[0];
-    const target = document.elementFromPoint(touch.clientX, touch.clientY);
+  boardElement.addEventListener("pointerdown", function (e) {
+    if (e.pointerType !== "touch") return; // Let HTML5 handle mouse
+    
+    // Check if the game is over
+    const gameOverModal = document.getElementById("game-over-modal");
+    if (gameOverModal && gameOverModal.style.display !== "none") return;
+
+    // Prevent default scroll behavior
+    e.preventDefault();
+
+    const target = document.elementFromPoint(e.clientX, e.clientY);
     if (!target) return;
-
-    const piece = target.closest(".piece");
-    if (!piece || !piece.draggable) return;
-
-    e.preventDefault();
-    const square = piece.closest(".square");
-    touchSource = {
-      row: parseInt(square.dataset.row),
-      col: parseInt(square.dataset.col),
-    };
-    touchPiece = piece;
-
-    // Create a visual clone that follows the finger
-    touchClone = piece.cloneNode(true);
-    touchClone.style.position = "fixed";
-    touchClone.style.pointerEvents = "none";
-    touchClone.style.zIndex = "1000";
-    touchClone.style.opacity = "0.85";
-    touchClone.style.fontSize = piece.style.fontSize || "clamp(18px, 4.5vw, 42px)";
-    touchClone.style.transform = playerRole === "b" ? "rotate(180deg)" : "none";
-    touchClone.style.left = touch.clientX - 24 + "px";
-    touchClone.style.top = touch.clientY - 24 + "px";
-    document.body.appendChild(touchClone);
-
-    piece.style.opacity = "0.3";
-  }, { passive: false });
-
-  boardElement.addEventListener("touchmove", function (e) {
-    if (!touchClone) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    touchClone.style.left = touch.clientX - 24 + "px";
-    touchClone.style.top = touch.clientY - 24 + "px";
-  }, { passive: false });
-
-  boardElement.addEventListener("touchend", function (e) {
-    if (!touchSource || !touchClone) {
-      cleanup();
-      return;
+    
+    const square = target.closest(".square");
+    if (!square) {
+        clearSelection();
+        return;
     }
 
-    const touch = e.changedTouches[0];
-    // Temporarily hide clone to find element beneath
-    touchClone.style.display = "none";
-    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    touchClone.style.display = "";
+    const rowIndex = parseInt(square.dataset.row);
+    const colIndex = parseInt(square.dataset.col);
+    const pieceEl = square.querySelector(".piece");
 
-    if (dropTarget) {
-      const square = dropTarget.closest(".square");
-      if (square) {
-        const targetSquare = {
-          row: parseInt(square.dataset.row),
-          col: parseInt(square.dataset.col),
-        };
-        handleMove(touchSource, targetSquare);
-      }
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    isDragging = false;
+
+    // Is there a selection already? Check if tapping a valid move square
+    if (selectedSquare) {
+        const isMoveTarget = validMoveSquares.some(sq => sq.row === rowIndex && sq.col === colIndex);
+        if (isMoveTarget) {
+            const targetSquare = { row: rowIndex, col: colIndex };
+            handleMove(selectedSquare, targetSquare);
+            clearSelection();
+            return;
+        }
+
+        // Tapping another piece of our own? Switch selection
+        if (pieceEl && pieceEl.draggable) {
+            selectPiece(rowIndex, colIndex, pieceEl, target);
+        } else {
+            // Tapping somewhere invalid -> clear
+            clearSelection();
+        }
+    } else {
+        // No selection, tap on piece to select
+        if (pieceEl && pieceEl.draggable) {
+            selectPiece(rowIndex, colIndex, pieceEl, target);
+            
+            // Setup for potential drag
+            touchSource = { row: rowIndex, col: colIndex };
+            touchPiece = pieceEl;
+        }
     }
-
-    cleanup();
   });
 
-  function cleanup() {
+  // Calculate valid moves purely off chess.js
+  function selectPiece(r, c, pieceEl, target) {
+      const fromAlgebraic = `${String.fromCharCode(97 + c)}${8 - r}`;
+      const legalMoves = chess.moves({ square: fromAlgebraic, verbose: true });
+      
+      selectedSquare = { row: r, col: c };
+      validMoveSquares = legalMoves.map(m => {
+          // 'to' is like 'e4'
+          const targetCol = m.to.charCodeAt(0) - 97;
+          const targetRow = 8 - parseInt(m.to[1]);
+          return { row: targetRow, col: targetCol };
+      });
+      renderBoard(); // re-applies highlights
+  }
+
+  boardElement.addEventListener("pointermove", function (e) {
+    if (e.pointerType !== "touch") return; // Let HTML5 drag handle mouse
+    if (!selectedSquare || !touchPiece) return;
+    
+    // Check if movement passed threshold to trigger dragging
+    if (!isDragging) {
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+          isDragging = true;
+          document.body.classList.add("dragging");
+          touchPiece.style.opacity = "0.3";
+
+          // Create clone
+          touchClone = touchPiece.cloneNode(true);
+          touchClone.style.position = "fixed";
+          touchClone.style.pointerEvents = "none";
+          touchClone.style.zIndex = "1000";
+          touchClone.style.opacity = "0.85";
+          touchClone.style.fontSize = touchPiece.style.fontSize || "clamp(18px, 4.5vw, 42px)";
+          touchClone.style.transform = playerRole === "b" ? "rotate(180deg)" : "none";
+          document.body.appendChild(touchClone);
+      }
+    }
+    
+    if (isDragging && touchClone) {
+        touchClone.style.left = e.clientX - 24 + "px";
+        touchClone.style.top = e.clientY - 24 + "px";
+    }
+  });
+
+  boardElement.addEventListener("pointerup", function (e) {
+    if (e.pointerType !== "touch") return;
+
+    if (isDragging) {
+        // Was dragging, handle drop
+        if (touchClone) {
+            touchClone.style.display = "none";
+            const dropTarget = document.elementFromPoint(e.clientX, e.clientY);
+            touchClone.style.display = "";
+
+            if (dropTarget) {
+                const square = dropTarget.closest(".square");
+                if (square) {
+                    const row = parseInt(square.dataset.row);
+                    const col = parseInt(square.dataset.col);
+                    
+                    // Check if it's a valid move (using our array)
+                    const isValidMove = validMoveSquares.some(sq => sq.row === row && sq.col === col);
+                    
+                    if (isValidMove) {
+                        handleMove(touchSource, { row, col });
+                    }
+                }
+            }
+        }
+        clearSelection(); // Drop finishes selection
+        cleanupDrag();
+    }
+    // If not dragging, tap logic handled it in pointerdown
+  });
+
+  boardElement.addEventListener("pointercancel", function(e) {
+      if (e.pointerType !== "touch") return;
+      cleanupDrag();
+  });
+
+  let touchSource = null;
+  let touchPiece = null;
+
+  function cleanupDrag() {
+    isDragging = false;
+    document.body.classList.remove("dragging");
     if (touchPiece) touchPiece.style.opacity = "1";
     if (touchClone && touchClone.parentNode) touchClone.parentNode.removeChild(touchClone);
-    touchPiece = null;
     touchSource = null;
+    touchPiece = null;
     touchClone = null;
   }
 })();
